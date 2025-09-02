@@ -359,7 +359,7 @@ export default function PublicProfilePage() {
                             rel="noopener noreferrer"
                             className="inline-flex items-center text-gray-600 hover:text-gray-800 text-sm"
                           >
-                            <GitHub className="h-3 w-3 mr-1" />
+                            <Github className="h-3 w-3 mr-1" />
                             Code
                           </a>
                         )}

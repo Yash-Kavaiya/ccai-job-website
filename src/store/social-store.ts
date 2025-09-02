@@ -403,7 +403,7 @@ export const useSocialStore = create<SocialStore>()(
       loadConnections: async () => {
         set({ isLoading: true, error: null });
         try {
-          const allConnections = await table.list('ewrtoiv0vw1s');
+          const allConnections = await table.select('ewrtoiv0vw1s', {});
           const acceptedConnections = allConnections.filter((c: any) => c.connection_status === 'accepted');
           set({ connections: acceptedConnections as UserConnection[], isLoading: false });
         } catch (error) {
@@ -414,7 +414,7 @@ export const useSocialStore = create<SocialStore>()(
       loadConnectionRequests: async () => {
         set({ isLoading: true, error: null });
         try {
-          const allConnections = await table.list('ewrtoiv0vw1s');
+          const allConnections = await table.select('ewrtoiv0vw1s', {});
           const pendingRequests = allConnections.filter((c: any) => c.connection_status === 'pending');
           set({ connectionRequests: pendingRequests as UserConnection[], isLoading: false });
         } catch (error) {

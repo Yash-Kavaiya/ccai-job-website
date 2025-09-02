@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Globe, Link, LinkedIn, Mail, Plus, Share2, Trash2, Twitter, Users, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Globe, Link, Linkedin, Mail, Plus, Share2, Trash2, Twitter, Users, X } from 'lucide-react';
 import { useSocialStore, type Achievement, type PortfolioItem, type SocialLinks } from '@/store/social-store';
 import { useAuthStore } from '@/store/auth-store';
 import { useToast } from '@/hooks/use-toast';
@@ -294,7 +294,7 @@ export default function SocialPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" onClick={() => handleShareProfile('linkedin')}>
-                      <LinkedIn className="h-4 w-4 mr-2" />
+                      <Linkedin className="h-4 w-4 mr-2" />
                       LinkedIn
                     </Button>
                     <Button variant="outline" onClick={() => handleShareProfile('twitter')}>

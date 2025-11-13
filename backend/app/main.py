@@ -84,10 +84,15 @@ async def internal_error_handler(request, exc):
     )
 
 
-# Import and include routers (will be added in later phases)
-# from app.api.v1 import auth, users, jobs, resumes, applications, interviews, social, ai_agents
-# app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-# app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+# Import and include routers
+from app.api.v1 import auth, users
+
+# Authentication & Users (Phase 2 - Complete)
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+
+# Additional routers (will be added in later phases)
+# from app.api.v1 import jobs, resumes, applications, interviews, social, ai_agents
 # app.include_router(jobs.router, prefix="/api/v1/jobs", tags=["Jobs"])
 # app.include_router(resumes.router, prefix="/api/v1/resumes", tags=["Resumes"])
 # app.include_router(applications.router, prefix="/api/v1/applications", tags=["Applications"])

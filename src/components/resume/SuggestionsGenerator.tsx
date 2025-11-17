@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { DevvAI } from '@devvai/devv-code-backend';
+import { DevvAI } from '@/lib/devv-backend-stub';
 
 interface SuggestionsGeneratorProps {
   currentSkills: string[];

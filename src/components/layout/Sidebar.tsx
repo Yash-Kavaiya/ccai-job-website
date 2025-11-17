@@ -8,7 +8,7 @@ import {
   Search, 
   FileText, 
   MessageSquare, 
-  BookmarkCheck,
+  Bookmark,
   TrendingUp,
   Settings,
   Users,
@@ -30,7 +30,7 @@ const navigationItems = [
     items: [
       { icon: Home, label: 'Dashboard', href: '/dashboard', badge: null },
       { icon: Search, label: 'Job Search', href: '/jobs', badge: null },
-      { icon: BookmarkCheck, label: 'Saved Jobs', href: '/saved', badge: 5 },
+      { icon: Bookmark, label: 'Saved Jobs', href: '/saved', badge: 5 },
     ]
   },
   {

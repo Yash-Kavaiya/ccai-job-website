@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { DevvAI } from '@devvai/devv-code-backend';
+import { DevvAI } from '@/lib/devv-backend-stub';
 import { 
   Sparkles, 
   Lightbulb, 

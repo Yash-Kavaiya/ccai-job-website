@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { auth } from '@devvai/devv-code-backend';
+import { auth } from '@/lib/devv-backend-stub';
 
 interface User {
   projectId: string;

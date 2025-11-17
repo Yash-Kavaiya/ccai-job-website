@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAIAgentsStore } from '@/store/ai-agents-store';
 import { useAuthStore } from '@/store/auth-store';
-import { elevenlabs } from '@devvai/devv-code-backend';
+import { elevenlabs } from '@/lib/devv-backend-stub';
 import {
   MessageSquare,
   Send,

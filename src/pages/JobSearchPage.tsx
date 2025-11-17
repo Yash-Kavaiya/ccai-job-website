@@ -32,7 +32,7 @@ import {
   Bookmark,
   Send,
   Settings,
-  Grid3X3,
+  Grid,
   List,
   CheckCircle2,
   ArrowUpDown,
@@ -482,7 +482,7 @@ export default function JobSearchPage() {
                 size="sm"
                 onClick={() => setViewMode('grid')}
               >
-                <Grid3X3 className="h-4 w-4" />
+                <Grid className="h-4 w-4" />
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'default' : 'outline'}

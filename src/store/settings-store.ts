@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { table } from '@devvai/devv-code-backend';
+import { table } from '@/lib/devv-backend-stub';
 import { useAuthStore } from './auth-store';
 
 // User Profile Types

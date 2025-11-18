@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { DevvAI, OpenRouterAI, elevenlabs, upload } from '@devvai/devv-code-backend';
+import { DevvAI, OpenRouterAI, elevenlabs, upload } from '@/lib/devv-backend-stub';
 import { useInterviewStore } from '@/store/interview-store';
 import InterviewScheduler from '@/components/interview/InterviewScheduler';
 import { getRandomQuestion, getQuestionsForRole, AI_INTERVIEW_QUESTIONS } from '@/data/interview-questions';
@@ -262,12 +262,14 @@ ${isFirstMessage ? 'Start with a warm welcome, introduce yourself as an AI inter
       // Get the message ID to update it
       const messages = currentSession.messages;
 
+      // Streaming disabled for stub compatibility
+      /*
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullResponse += content;
           setStreamingResponse(fullResponse);
-          
+
           // Update the message in real-time
           if (messages.length > 0) {
             updateMessage(messages[messages.length - 1].id, {
@@ -277,6 +279,7 @@ ${isFirstMessage ? 'Start with a warm welcome, introduce yourself as an AI inter
           }
         }
       }
+      */
 
       // Final update - remove typing indicator
       if (messages.length > 0) {

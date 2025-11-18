@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { table, auth, email } from '@devvai/devv-code-backend';
+import { table, auth, email } from '@/lib/devv-backend-stub';
 
 export interface ScheduledInterview {
   id: string;

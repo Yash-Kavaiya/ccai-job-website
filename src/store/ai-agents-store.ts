@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DevvAI, OpenRouterAI, table, email, elevenlabs } from '@devvai/devv-code-backend';
+import { DevvAI, OpenRouterAI, table, email, elevenlabs } from '@/lib/devv-backend-stub';
 import { useAuthStore } from './auth-store';
 import { useResumeStore } from './resume-store';
 import { useJobMatchingStore } from './job-matching-store';

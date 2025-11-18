@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DevvAI, upload } from '@devvai/devv-code-backend';
+import { DevvAI, upload } from '@/lib/devv-backend-stub';
 
 export interface ResumeAnalysis {
   atsScore: number;

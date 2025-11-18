@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { table, webSearch, DevvAI, OpenRouterAI } from '@devvai/devv-code-backend';
+import { table, webSearch, DevvAI, OpenRouterAI } from '@/lib/devv-backend-stub';
 
 interface JobSource {
   id: string;

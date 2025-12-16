@@ -32,7 +32,7 @@ export default function AutoResumeBuilder() {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedResume, setGeneratedResume] = useState<any>(null);
   const [optimizationScore, setOptimizationScore] = useState(0);
-  
+
   const { generateTailoredResume, generatedResumes } = useAIAgentsStore();
   const { currentResume } = useResumeStore();
 
@@ -71,7 +71,7 @@ export default function AutoResumeBuilder() {
       for (const step of steps) {
         await new Promise(resolve => setTimeout(resolve, 800));
         setGenerationProgress(step.progress);
-        
+
         toast({
           title: 'Processing',
           description: step.message,
@@ -79,7 +79,7 @@ export default function AutoResumeBuilder() {
       }
 
       await generateTailoredResume(jobDescription);
-      
+
       // Simulate generated resume data
       const mockResume = {
         id: `resume-${Date.now()}`,
@@ -91,7 +91,7 @@ export default function AutoResumeBuilder() {
           'Restructured experience section for ATS compatibility',
           'Added quantified achievements in AI model development'
         ],
-        atsScore: 92,
+        ats_score: 92,
         keywordMatches: 18,
         sections: {
           summary: 'AI Engineer with 5+ years of experience developing machine learning models and neural networks. Expertise in Python, TensorFlow, and deep learning algorithms. Proven track record of deploying production AI systems that improved operational efficiency by 40%.',
@@ -104,11 +104,11 @@ export default function AutoResumeBuilder() {
       };
 
       setGeneratedResume(mockResume);
-      setOptimizationScore(mockResume.atsScore);
+      setOptimizationScore(mockResume.ats_score);
 
       toast({
         title: 'Resume Generated Successfully!',
-        description: `Your tailored resume has been optimized with ${mockResume.atsScore}% ATS compatibility.`,
+        description: `Your tailored resume has been optimized with ${mockResume.ats_score}% ATS compatibility.`,
       });
 
     } catch (error) {
@@ -243,7 +243,7 @@ Preferred Qualifications:
                   )}
                   Generate Tailored Resume
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -318,7 +318,7 @@ Preferred Qualifications:
                 {/* Resume Sections Preview */}
                 <div className="space-y-4">
                   <h4 className="font-semibold">Resume Preview</h4>
-                  
+
                   <div className="space-y-3">
                     <div className="p-3 border rounded-lg">
                       <h5 className="font-medium text-sm mb-2">Professional Summary</h5>
@@ -326,7 +326,7 @@ Preferred Qualifications:
                         {generatedResume.sections.summary}
                       </p>
                     </div>
-                    
+
                     <div className="p-3 border rounded-lg">
                       <h5 className="font-medium text-sm mb-2">Key Skills</h5>
                       <div className="flex flex-wrap gap-1">
@@ -359,8 +359,8 @@ Preferred Qualifications:
                     <span className="text-sm">Base resume uploaded</span>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p>Filename: {currentResume.filename}</p>
-                    <p>ATS Score: {currentResume.analysis?.atsScore || 0}%</p>
+                    <p>Filename: {currentResume.name}</p>
+                    <p>ATS Score: {currentResume.analysis?.ats_score || 0}%</p>
                   </div>
                 </div>
               ) : (

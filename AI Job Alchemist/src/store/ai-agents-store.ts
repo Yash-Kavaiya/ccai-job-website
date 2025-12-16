@@ -121,38 +121,38 @@ export interface AIAgentsState {
   // Agent Management
   agents: AIAgent[];
   activeAgents: string[];
-  
+
   // Agent Actions
   actions: AgentAction[];
   pendingActions: AgentAction[];
   completedActions: AgentAction[];
-  
+
   // Chatbot
   chatSessions: ChatSession[];
   currentChatSession: ChatSession | null;
   isTyping: boolean;
-  
+
   // Trend Analysis
   trends: TrendAnalysis[];
   trendAlerts: TrendAnalysis[];
-  
+
   // Networking
   networkingSuggestions: NetworkingSuggestion[];
-  
+
   // Auto Resume Builder
   resumeTemplates: any[];
   generatedResumes: any[];
-  
+
   // Career Coaching
   careerGoals: string[];
   progressMetrics: Record<string, number>;
   coachingInsights: string[];
-  
+
   // Agent Activity
   agentLogs: any[];
   isProcessing: boolean;
   lastUpdate: number;
-  
+
   // Settings
   notificationSettings: {
     email: boolean;
@@ -167,7 +167,7 @@ export interface AIAgentsState {
     digestTime: string; // 'morning' | 'evening'
     frequency: 'daily' | 'weekly' | 'biweekly';
   };
-  
+
   // Email Scheduling
   emailScheduler: {
     lastDailyDigest: number;
@@ -187,41 +187,41 @@ export interface AIAgentsActions {
   updateAgentConfig: (agentId: string, config: Partial<AgentConfig>) => void;
   runAgent: (agentId: string) => Promise<void>;
   runAllActiveAgents: () => Promise<void>;
-  
+
   // Actions Management
   createAction: (action: Omit<AgentAction, 'id'>) => void;
   updateActionStatus: (actionId: string, status: AgentAction['status']) => void;
   dismissAction: (actionId: string) => void;
   completeAction: (actionId: string) => void;
-  
+
   // Chatbot
   startChatSession: (title?: string) => ChatSession;
   sendMessage: (content: string, sessionId?: string) => Promise<void>;
   getAIResponse: (messages: ChatMessage[], context?: any) => Promise<string>;
   endChatSession: (sessionId: string) => void;
   clearTyping: () => void;
-  
+
   // Career Coach Agent
   generateCareerAdvice: () => Promise<void>;
   analyzeCareerProgress: () => Promise<void>;
   suggestJobOpportunities: () => Promise<void>;
   sendDailyCareerDigest: () => Promise<void>;
-  
+
   // Trend Analyzer Agent
   analyzeTrends: () => Promise<void>;
   detectEmergingSkills: () => Promise<void>;
   generateTrendAlerts: () => Promise<void>;
-  
+
   // Networking Suggester Agent
   analyzeNetworkingOpportunities: () => Promise<void>;
   generateConnectionSuggestions: () => Promise<void>;
   sendNetworkingReminders: () => Promise<void>;
-  
+
   // Auto Resume Builder Agent
   generateTailoredResume: (jobDescription: string) => Promise<void>;
   optimizeResumeForATS: (resumeId: string) => Promise<void>;
   createResumeVariations: () => Promise<void>;
-  
+
   // Email Notification Functions
   scheduleEmail: (email: Omit<ScheduledEmail, 'id' | 'createdAt'>) => void;
   sendScheduledEmails: () => Promise<void>;
@@ -232,7 +232,7 @@ export interface AIAgentsActions {
   sendSkillDevelopmentReminder: (skills: string[]) => Promise<void>;
   sendNetworkingPrompt: (suggestions: NetworkingSuggestion[]) => Promise<void>;
   sendCareerMilestoneEmail: (milestone: string, achievement: any) => Promise<void>;
-  
+
   // Utilities
   updateSettings: (settings: Partial<AIAgentsState['notificationSettings']>) => void;
   clearActions: () => void;
@@ -377,7 +377,7 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
         digestTime: 'morning',
         frequency: 'daily'
       },
-      
+
       emailScheduler: {
         lastDailyDigest: 0,
         lastWeeklyReport: 0,
@@ -402,7 +402,7 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
         if (state.agents.length === 0) {
           set({ agents: defaultAgents });
         }
-        
+
         // Start periodic agent runs
         state.activeAgents.forEach(agentId => {
           const agent = state.agents.find(a => a.id === agentId);
@@ -420,10 +420,10 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
         if (!agent) return;
 
         set({
-          agents: state.agents.map(a => 
+          agents: state.agents.map(a =>
             a.id === agentId ? { ...a, isActive: true } : a
           ),
-          activeAgents: [...state.activeAgents, agentId].filter((id, index, arr) => 
+          activeAgents: [...state.activeAgents, agentId].filter((id, index, arr) =>
             arr.indexOf(id) === index
           )
         });
@@ -435,7 +435,7 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
       deactivateAgent: async (agentId: string) => {
         const state = get();
         set({
-          agents: state.agents.map(a => 
+          agents: state.agents.map(a =>
             a.id === agentId ? { ...a, isActive: false } : a
           ),
           activeAgents: state.activeAgents.filter(id => id !== agentId)
@@ -446,7 +446,7 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
         const state = get();
         set({
           agents: state.agents.map(agent =>
-            agent.id === agentId 
+            agent.id === agentId
               ? { ...agent, config: { ...agent.config, ...config } }
               : agent
           )
@@ -487,16 +487,16 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
             agents: state.agents.map(a =>
               a.id === agentId
                 ? {
-                    ...a,
-                    lastRun: Date.now(),
-                    metrics: {
-                      ...a.metrics,
-                      totalRuns: a.metrics.totalRuns + 1,
-                      successfulRuns: a.metrics.successfulRuns + 1,
-                      lastSuccessTime: Date.now(),
-                      averageRunTime: (a.metrics.averageRunTime + runTime) / 2
-                    }
+                  ...a,
+                  lastRun: Date.now(),
+                  metrics: {
+                    ...a.metrics,
+                    totalRuns: a.metrics.totalRuns + 1,
+                    successfulRuns: a.metrics.successfulRuns + 1,
+                    lastSuccessTime: Date.now(),
+                    averageRunTime: (a.metrics.averageRunTime + runTime) / 2
                   }
+                }
                 : a
             )
           });
@@ -535,12 +535,12 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
             agents: state.agents.map(a =>
               a.id === action.agentId
                 ? {
-                    ...a,
-                    metrics: {
-                      ...a.metrics,
-                      actionsGenerated: a.metrics.actionsGenerated + 1
-                    }
+                  ...a,
+                  metrics: {
+                    ...a.metrics,
+                    actionsGenerated: a.metrics.actionsGenerated + 1
                   }
+                }
                 : a
             )
           });
@@ -553,10 +553,10 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
           actions: state.actions.map(action =>
             action.id === actionId ? { ...action, status } : action
           ),
-          pendingActions: state.pendingActions.filter(a => 
+          pendingActions: state.pendingActions.filter(a =>
             a.id !== actionId || status === 'pending'
           ),
-          completedActions: status === 'completed' 
+          completedActions: status === 'completed'
             ? [...state.completedActions, state.actions.find(a => a.id === actionId)!]
             : state.completedActions.filter(a => a.id !== actionId)
         });
@@ -592,7 +592,7 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
 
       sendMessage: async (content: string, sessionId?: string) => {
         const state = get();
-        const session = sessionId 
+        const session = sessionId
           ? state.chatSessions.find(s => s.id === sessionId)
           : state.currentChatSession;
 
@@ -645,12 +645,12 @@ export const useAIAgentsStore = create<AIAgentsState & AIAgentsActions>()(
       getAIResponse: async (messages: ChatMessage[], context?: any) => {
         try {
           const ai = new OpenRouterAI();
-          
+
           // Build context-aware system message
           const authStore = useAuthStore.getState();
           const resumeStore = useResumeStore.getState();
           const jobStore = useJobMatchingStore.getState();
-          
+
           const systemMessage = `You are an AI career assistant for AIJobHub, specializing in AI and tech careers. 
 
 CONTEXT:
@@ -711,11 +711,11 @@ RESPONSE STYLE: Concise but comprehensive, use bullet points for lists, include 
           const authStore = useAuthStore.getState();
           const resumeStore = useResumeStore.getState();
           const jobStore = useJobMatchingStore.getState();
-          
+
           if (!authStore.isAuthenticated) return;
 
           const ai = new OpenRouterAI();
-          
+
           const prompt = `Based on the user's profile data, generate 3-5 personalized career advancement recommendations:
 
 USER PROFILE:
@@ -741,7 +741,7 @@ Format as JSON with: { "insights": ["insight1", "insight2", ...] }`;
           });
 
           const result = JSON.parse(response.choices[0].message.content || '{"insights": []}');
-          
+
           set({
             coachingInsights: result.insights || []
           });
@@ -775,11 +775,11 @@ Format as JSON with: { "insights": ["insight1", "insight2", ...] }`;
 
           const metrics = {
             profileCompleteness: resumeStore.currentResume ? 85 : 20,
-            jobMatchQuality: jobStore.matches.length > 0 
+            jobMatchQuality: jobStore.matches.length > 0
               ? jobStore.matches.reduce((acc, m) => acc + m.similarity_score, 0) / jobStore.matches.length * 100
               : 0,
             applicationProgress: Math.min(jobStore.matches.filter(m => m.application_status === 'applied').length * 10, 100),
-            skillAlignment: resumeStore.currentResume?.analysis?.atsScore || 0,
+            skillAlignment: resumeStore.currentResume?.analysis?.ats_score || 0,
             networkingScore: 45 // Placeholder - would integrate with networking data
           };
 
@@ -837,7 +837,7 @@ Format as JSON with: { "insights": ["insight1", "insight2", ...] }`;
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.dailyDigest) return;
 
           // Check if daily digest was already sent today
@@ -1020,7 +1020,7 @@ View your full dashboard: https://aijobhub.com/dashboard
       analyzeTrends: async () => {
         try {
           const ai = new OpenRouterAI();
-          
+
           // Simulate trend analysis (in real implementation, would use web search)
           const trendPrompt = `Analyze current AI industry trends for 2024. Identify:
 
@@ -1051,7 +1051,7 @@ Focus on actionable insights for AI professionals. Format as JSON:
           });
 
           const result = JSON.parse(response.choices[0].message.content || '{"trends": []}');
-          
+
           const trends: TrendAnalysis[] = result.trends.map((t: any, index: number) => ({
             id: `trend-${Date.now()}-${index}`,
             category: t.category,
@@ -1096,7 +1096,7 @@ Focus on actionable insights for AI professionals. Format as JSON:
       detectEmergingSkills: async () => {
         try {
           const ai = new OpenRouterAI();
-          
+
           const skillsPrompt = `Based on current AI job market trends, identify the top 10 emerging skills that AI professionals should learn in 2024-2025:
 
 Include:
@@ -1122,7 +1122,7 @@ Format as JSON: {"skills": [{"name": "", "category": "", "demand": "", "difficul
           });
 
           const result = JSON.parse(response.choices[0].message.content || '{"skills": []}');
-          
+
           get().createAction({
             agentId: 'trend-analyzer',
             type: 'skill-recommendation',
@@ -1141,7 +1141,7 @@ Format as JSON: {"skills": [{"name": "", "category": "", "demand": "", "difficul
 
       generateTrendAlerts: async () => {
         const state = get();
-        const recentTrends = state.trends.filter(t => 
+        const recentTrends = state.trends.filter(t =>
           Date.now() - t.detectedAt < 24 * 60 * 60 * 1000 && t.confidence > 0.7
         );
 
@@ -1219,7 +1219,7 @@ Format as JSON: {"skills": [{"name": "", "category": "", "demand": "", "difficul
           if (!resumeStore.currentResume) return;
 
           const ai = new OpenRouterAI();
-          
+
           const prompt = `Create a tailored resume version based on this job description:
 
 JOB DESCRIPTION:
@@ -1244,7 +1244,7 @@ Format as JSON with optimized sections.`;
           });
 
           const optimizedResume = response.choices[0].message.content;
-          
+
           set({
             generatedResumes: [...get().generatedResumes, {
               id: `resume-${Date.now()}`,
@@ -1354,7 +1354,7 @@ Format as JSON with optimized sections.`;
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.email) return;
 
           let subject = '';
@@ -1369,7 +1369,7 @@ Format as JSON with optimized sections.`;
             case 'job-notification':
               subject = `🎯 ${data.jobs.length} New High-Match AI Jobs Found`;
               await get().sendJobOpportunityAlert(data.jobs);
-              return;  
+              return;
             case 'skill-reminder':
               subject = `📚 Skill Development Reminder: ${data.skills.join(', ')}`;
               await get().sendSkillDevelopmentReminder(data.skills);
@@ -1400,7 +1400,7 @@ Format as JSON with optimized sections.`;
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.weeklyReport) return;
 
           const now = Date.now();
@@ -1562,7 +1562,7 @@ View your dashboard: https://aijobhub.com/dashboard
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.trendAlerts) return;
 
           const htmlContent = `
@@ -1673,7 +1673,7 @@ View all trends: https://aijobhub.com/trends
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.jobSuggestions || jobs.length === 0) return;
 
           const topJobs = jobs.slice(0, 5);
@@ -1789,7 +1789,7 @@ View all jobs: https://aijobhub.com/jobs
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.skillRecommendations) return;
 
           const skillResources = skills.map(skill => ({
@@ -1884,7 +1884,7 @@ View all jobs: https://aijobhub.com/jobs
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.networkingReminders) return;
 
           const topSuggestions = suggestions.slice(0, 3);
@@ -1974,7 +1974,7 @@ View all jobs: https://aijobhub.com/jobs
         try {
           const authStore = useAuthStore.getState();
           const state = get();
-          
+
           if (!authStore.isAuthenticated || !state.notificationSettings.careerMilestones) return;
 
           const htmlContent = `

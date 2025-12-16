@@ -54,8 +54,8 @@ export function ResumePage() {
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="analysis" 
+                <TabsTrigger
+                  value="analysis"
                   className="flex items-center space-x-2"
                   disabled={!currentResume?.analysis}
                 >
@@ -63,7 +63,7 @@ export function ResumePage() {
                   <span>Analysis</span>
                   {currentResume?.analysis && (
                     <Badge variant="secondary" className="ml-1 text-xs">
-                      {currentResume.analysis.atsScore}
+                      {currentResume.analysis.ats_score}
                     </Badge>
                   )}
                 </TabsTrigger>
@@ -82,20 +82,20 @@ export function ResumePage() {
                   <div className="space-y-6">
                     <div className="text-center pb-4">
                       <h3 className="text-lg font-semibold mb-2">
-                        Analysis Results for "{currentResume.filename}"
+                        Analysis Results for "{currentResume.name}"
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         Comprehensive ATS evaluation and AI-powered recommendations
                       </p>
                     </div>
-                    <ATSResults 
-                      analysis={currentResume.analysis} 
+                    <ATSResults
+                      analysis={currentResume.analysis}
                       isAnalyzing={currentResume.isAnalyzing}
                     />
                   </div>
                 ) : currentResume?.isAnalyzing ? (
-                  <ATSResults 
-                    analysis={{} as any} 
+                  <ATSResults
+                    analysis={{} as any}
                     isAnalyzing={true}
                   />
                 ) : (
@@ -107,7 +107,7 @@ export function ResumePage() {
                         Upload a resume or select an existing one to view analysis results
                       </p>
                       <div className="flex justify-center space-x-2">
-                        <Button 
+                        <Button
                           onClick={() => setActiveTab('upload')}
                           className="flex items-center space-x-2"
                         >
@@ -115,7 +115,7 @@ export function ResumePage() {
                           <span>Upload Resume</span>
                         </Button>
                         {resumes.length > 0 && (
-                          <Button 
+                          <Button
                             variant="outline"
                             onClick={() => setActiveTab('manage')}
                             className="flex items-center space-x-2"

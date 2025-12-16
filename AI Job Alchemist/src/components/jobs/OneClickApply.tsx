@@ -12,10 +12,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useJobMatchingStore } from '@/store/job-matching-store';
 import { useResumeStore } from '@/store/resume-store';
-import { 
-  Send, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Send,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   ExternalLink,
   Zap,
@@ -102,7 +102,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
         summary: formData.summary,
         experience: [],
         education: [],
-        skills: currentResume?.analysis?.skillsFound || [],
+        skills: currentResume?.skills || [],
         projects: [],
       },
       cover_letter: formData.coverLetter,
@@ -110,7 +110,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
 
     setupApplicationData(appData);
     setShowSetup(false);
-    
+
     toast({
       title: "Application Data Configured",
       description: "You're now ready to use One-Click Apply!",
@@ -132,7 +132,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
       }
 
       await applyToJob(jobId);
-      
+
       toast({
         title: "Application Submitted",
         description: "Your application has been sent successfully!",
@@ -148,7 +148,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
 
   const handleBatchApply = async () => {
     const selectedJobs = batchApplyJobs.filter(job => job.selected);
-    
+
     if (selectedJobs.length === 0) {
       toast({
         title: "No Jobs Selected",
@@ -169,9 +169,9 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
 
     try {
       await batchApplyToJobs();
-      
+
       const successCount = applyProgress.filter(p => p.status === 'success').length;
-      
+
       toast({
         title: "Batch Apply Complete",
         description: `Successfully applied to ${successCount} out of ${selectedJobs.length} jobs.`,
@@ -311,8 +311,8 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
           </div>
         </CardHeader>
         <CardContent>
-          <Progress 
-            value={(dailyApplicationCount / applicationLimit) * 100} 
+          <Progress
+            value={(dailyApplicationCount / applicationLimit) * 100}
             className="h-2"
           />
           <p className="text-xs text-muted-foreground mt-2">
@@ -368,7 +368,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
                 </div>
 
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     onClick={handleSingleApply}
                     disabled={isApplying || dailyApplicationCount >= applicationLimit}
                     className="flex-1"
@@ -380,7 +380,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
                     )}
                     Apply Now
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     onClick={() => window.open(generateApplicationUrl(jobId), '_blank')}
@@ -453,7 +453,7 @@ export default function OneClickApply({ jobId, showBatchApply = false }: OneClic
                     <Separator />
 
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         onClick={handleBatchApply}
                         disabled={isApplying || batchApplyJobs.filter(j => j.selected).length === 0}
                         className="flex-1"

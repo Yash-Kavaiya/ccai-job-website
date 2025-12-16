@@ -15,14 +15,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Search, 
-  MapPin, 
-  Building2, 
-  Clock, 
-  Star, 
-  StarOff, 
-  ExternalLink, 
+import {
+  Search,
+  MapPin,
+  Building2,
+  Clock,
+  Star,
+  StarOff,
+  ExternalLink,
   Filter,
   Sparkles,
   Target,
@@ -54,7 +54,7 @@ export default function JobSearchPage() {
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState('relevance');
   const [showBulkApplyModal, setShowBulkApplyModal] = useState(false);
-  
+
   // Filter states
   const [locationFilter, setLocationFilter] = useState('');
   const [experienceFilter, setExperienceFilter] = useState('');
@@ -150,15 +150,15 @@ export default function JobSearchPage() {
 
     // Use the latest resume
     const latestResume = resumes[resumes.length - 1];
-    const resumeText = latestResume?.filename || 'User Resume';
-    
+    const resumeText = latestResume?.name || 'User Resume';
+
     await findJobMatches(resumeText);
-    
+
     toast({
       title: "Matching Complete",
       description: `Found ${matches.length} potential matches`,
     });
-    
+
     setActiveTab('matches');
   };
 
@@ -191,12 +191,12 @@ export default function JobSearchPage() {
     }
 
     await findJobMatchesByJD(jobDescriptionText);
-    
+
     toast({
       title: "JD Matching Complete",
       description: `Found ${matches.length} similar job listings`,
     });
-    
+
     setActiveTab('matches');
   };
 
@@ -291,7 +291,7 @@ export default function JobSearchPage() {
     const jobId = job.id || job.job_id;
     const isSelected = selectedJobs.has(jobId);
     const isListView = viewMode === 'list';
-    
+
     return (
       <Card key={jobId} className={`group hover:shadow-lg transition-all duration-200 ${isSelected ? 'ring-2 ring-primary' : ''} ${isListView ? 'flex' : ''}`}>
         <CardHeader className={`${isListView ? 'flex-1' : ''} pb-3`}>
@@ -302,7 +302,7 @@ export default function JobSearchPage() {
               onCheckedChange={(checked) => handleJobSelect(jobId, !!checked)}
               className="mt-1"
             />
-            
+
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -314,7 +314,7 @@ export default function JobSearchPage() {
                     {job.company}
                   </CardDescription>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   {match && (
                     <div className="text-right">
@@ -385,38 +385,38 @@ export default function JobSearchPage() {
               </div>
             )}
 
-          {match && match.match_reasons && (
-            <div className="bg-primary/5 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-primary">Why this matches:</h4>
-                <Badge variant="outline" className="text-xs">
-                  {match.match_type === 'resume_vector' ? 'Resume Match' : 
-                   match.match_type === 'job_description' ? 'JD Similarity' : 'AI Match'}
-                </Badge>
-              </div>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                {match.match_reasons.slice(0, 3).map((reason: string, index: number) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <Sparkles className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
-                    {reason}
-                  </li>
-                ))}
-                {match.match_reasons.length > 3 && (
-                  <li className="text-xs text-muted-foreground/70 mt-1">
-                    +{match.match_reasons.length - 3} more reasons
-                  </li>
-                )}
-              </ul>
-              {match.similarity_score >= 0.9 && (
-                <div className="mt-2 flex items-center gap-1 text-xs text-green-600">
-                  <Target className="h-3 w-3" />
-                  High-confidence match
+            {match && match.match_reasons && (
+              <div className="bg-primary/5 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-primary">Why this matches:</h4>
+                  <Badge variant="outline" className="text-xs">
+                    {match.match_type === 'resume_vector' ? 'Resume Match' :
+                      match.match_type === 'job_description' ? 'JD Similarity' : 'AI Match'}
+                  </Badge>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  {match.match_reasons.slice(0, 3).map((reason: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <Sparkles className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
+                      {reason}
+                    </li>
+                  ))}
+                  {match.match_reasons.length > 3 && (
+                    <li className="text-xs text-muted-foreground/70 mt-1">
+                      +{match.match_reasons.length - 3} more reasons
+                    </li>
+                  )}
+                </ul>
+                {match.similarity_score >= 0.9 && (
+                  <div className="mt-2 flex items-center gap-1 text-xs text-green-600">
+                    <Target className="h-3 w-3" />
+                    High-confidence match
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
 
         <CardFooter className={`flex items-center justify-between pt-3 border-t ml-8`}>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -438,16 +438,16 @@ export default function JobSearchPage() {
               className="gap-2"
               asChild
             >
-              <a 
-                href={job.external_url} 
-                target="_blank" 
+              <a
+                href={job.external_url}
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <ExternalLink className="h-4 w-4" />
                 View Details
               </a>
             </Button>
-            
+
             <Button
               size="sm"
               onClick={() => match ? handleApply(match.id, jobId) : null}
@@ -473,7 +473,7 @@ export default function JobSearchPage() {
               Find and match with AI-specialized positions using advanced similarity search
             </p>
           </div>
-          
+
           {/* View Controls */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -492,7 +492,7 @@ export default function JobSearchPage() {
                 <List className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -521,7 +521,7 @@ export default function JobSearchPage() {
                     onChange={(e) => setLocationFilter(e.target.value)}
                   />
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Experience Level</label>
                   <Select value={experienceFilter} onValueChange={setExperienceFilter}>
@@ -693,7 +693,7 @@ export default function JobSearchPage() {
                     {showJDMatcher ? 'Hide' : 'Show'} JD Matcher
                   </Button>
                 </div>
-                
+
                 {showJDMatcher && (
                   <div className="space-y-3">
                     <textarea
@@ -703,8 +703,8 @@ export default function JobSearchPage() {
                       onChange={(e) => setJobDescriptionText(e.target.value)}
                     />
                     <div className="flex gap-2">
-                      <Button 
-                        onClick={handleJDMatch} 
+                      <Button
+                        onClick={handleJDMatch}
                         disabled={matchingInProgress}
                         size="sm"
                         className="gap-2"
@@ -718,7 +718,7 @@ export default function JobSearchPage() {
                       </Button>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>Similarity threshold:</span>
-                        <select 
+                        <select
                           value={filters.similarity_threshold}
                           onChange={(e) => handleSimilarityThresholdChange(parseFloat(e.target.value))}
                           className="border rounded px-2 py-1 text-xs"
@@ -741,7 +741,7 @@ export default function JobSearchPage() {
                 <div className="flex flex-wrap gap-2">
                   {[
                     'Google CCAI',
-                    'Microsoft Copilot', 
+                    'Microsoft Copilot',
                     'Amazon Lex',
                     'OpenAI GPT',
                     'LangChain',
@@ -784,7 +784,7 @@ export default function JobSearchPage() {
                     <RefreshCw className="h-4 w-4" />
                     Auto-Aggregate Jobs
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     onClick={() => setShowFilters(!showFilters)}
@@ -897,7 +897,7 @@ export default function JobSearchPage() {
               <h2 className="text-xl font-semibold">
                 Job Listings ({filteredJobs.length})
               </h2>
-              
+
               {loading && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -908,7 +908,7 @@ export default function JobSearchPage() {
 
             <div className="grid gap-4">
               {filteredJobs.map(job => renderJobCard(job))}
-              
+
               {filteredJobs.length === 0 && !loading && (
                 <Card className="text-center py-12">
                   <CardContent>
@@ -940,7 +940,7 @@ export default function JobSearchPage() {
                 AI-powered matches based on your resume and preferences
               </p>
             </div>
-            
+
             <Button
               onClick={handleFindMatches}
               disabled={matchingInProgress}
@@ -960,7 +960,7 @@ export default function JobSearchPage() {
               const job = getJobById(match.job_id);
               return job ? renderJobCard(job, match) : null;
             })}
-            
+
             {matches.length === 0 && (
               <Card className="text-center py-12">
                 <CardContent>
@@ -1005,7 +1005,7 @@ export default function JobSearchPage() {
                     })}
                   />
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">AI Focus Areas</label>
                   <Input
@@ -1134,7 +1134,7 @@ export default function JobSearchPage() {
                     <div className="w-20 text-sm font-medium">{item.range}</div>
                     <div className="flex-1">
                       <div className="h-6 bg-muted rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className={`h-full ${item.color} transition-all duration-300`}
                           style={{ width: `${matches.length > 0 ? (item.count / matches.length) * 100 : 0}%` }}
                         />
@@ -1164,12 +1164,12 @@ export default function JobSearchPage() {
               You're about to apply to {selectedJobs.size} jobs. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <p className="text-sm text-muted-foreground mb-4">
               Your application will be automatically customized for each role using your resume and AI optimization.
             </p>
-            
+
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Jobs selected:</span>
@@ -1185,7 +1185,7 @@ export default function JobSearchPage() {
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBulkApplyModal(false)}>
               Cancel

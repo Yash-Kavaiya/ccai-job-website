@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  FileText, 
-  Download, 
-  Trash2, 
+import {
+  FileText,
+  Download,
+  Trash2,
   RotateCcw,
   Calendar,
   Target
@@ -20,7 +20,7 @@ export function ResumeManager() {
   const { toast } = useToast();
 
   const handleDownload = (resume: any) => {
-    window.open(resume.uploadUrl, '_blank');
+    window.open(resume.file_url, '_blank');
   };
 
   const handleReanalyze = async (resumeId: string) => {
@@ -86,25 +86,24 @@ export function ResumeManager() {
 
       <div className="grid gap-4">
         {resumes.map((resume) => (
-          <Card 
-            key={resume.id} 
-            className={`transition-all duration-200 ${
-              currentResume?.id === resume.id 
-                ? 'ring-2 ring-primary border-primary' 
-                : 'hover:shadow-md'
-            }`}
+          <Card
+            key={resume.id}
+            className={`transition-all duration-200 ${currentResume?.id === resume.id
+              ? 'ring-2 ring-primary border-primary'
+              : 'hover:shadow-md'
+              }`}
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-base flex items-center space-x-2">
                     <FileText className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{resume.filename}</span>
+                    <span className="truncate">{resume.name}</span>
                   </CardTitle>
                   <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
-                      <span>{formatDate(resume.uploadedAt)}</span>
+                      <span>{formatDate(resume.created_at)}</span>
                     </div>
                     {currentResume?.id === resume.id && (
                       <Badge variant="outline" className="text-xs">Current</Badge>
@@ -114,12 +113,12 @@ export function ResumeManager() {
 
                 <div className="flex items-center space-x-2 ml-4">
                   {resume.analysis && (
-                    <Badge className={`${getScoreColor(resume.analysis.atsScore)} border`}>
+                    <Badge className={`${getScoreColor(resume.analysis.ats_score)} border`}>
                       <Target className="h-3 w-3 mr-1" />
-                      {resume.analysis.atsScore}/100
+                      {resume.analysis.ats_score}/100
                     </Badge>
                   )}
-                  
+
                   {resume.isAnalyzing && (
                     <Badge variant="outline" className="text-xs">
                       <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
@@ -134,34 +133,34 @@ export function ResumeManager() {
               {resume.analysis && !resume.isAnalyzing && (
                 <div className="space-y-3 mb-4">
                   <Separator />
-                  
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Skills Found:</span>
                       <span className="ml-2 font-medium">
-                        {resume.analysis.skillsFound.length}
+                        {(resume.analysis.keyword_matches || []).length}
                       </span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Suggestions:</span>
                       <span className="ml-2 font-medium">
-                        {resume.analysis.suggestions.length}
+                        {(resume.analysis.suggestions || []).length}
                       </span>
                     </div>
                   </div>
 
-                  {resume.analysis.skillsFound.length > 0 && (
+                  {(resume.analysis.keyword_matches || []).length > 0 && (
                     <div>
                       <span className="text-xs text-muted-foreground mb-2 block">Top Skills:</span>
                       <div className="flex flex-wrap gap-1">
-                        {resume.analysis.skillsFound.slice(0, 3).map((skill, index) => (
+                        {(resume.analysis.keyword_matches || []).slice(0, 3).map((skill, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             {skill}
                           </Badge>
                         ))}
-                        {resume.analysis.skillsFound.length > 3 && (
+                        {(resume.analysis.keyword_matches || []).length > 3 && (
                           <Badge variant="outline" className="text-xs">
-                            +{resume.analysis.skillsFound.length - 3} more
+                            +{(resume.analysis.keyword_matches || []).length - 3} more
                           </Badge>
                         )}
                       </div>
@@ -215,7 +214,7 @@ export function ResumeManager() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete Resume</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Are you sure you want to delete "{resume.filename}"? This action cannot be undone.
+                        Are you sure you want to delete "{resume.name}"? This action cannot be undone.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

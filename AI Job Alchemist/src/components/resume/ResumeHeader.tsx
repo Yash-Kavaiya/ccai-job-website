@@ -13,12 +13,12 @@ export function ResumeHeader() {
   const stats = React.useMemo(() => {
     const totalResumes = resumes.length;
     const analyzedResumes = resumes.filter(r => r.analysis).length;
-    const avgScore = analyzedResumes > 0 
-      ? Math.round(resumes.reduce((sum, r) => sum + (r.analysis?.atsScore || 0), 0) / analyzedResumes)
+    const avgScore = analyzedResumes > 0
+      ? Math.round(resumes.reduce((sum, r) => sum + (r.analysis?.ats_score || 0), 0) / analyzedResumes)
       : 0;
-    
-    const highScoreResumes = resumes.filter(r => r.analysis && r.analysis.atsScore >= 80).length;
-    
+
+    const highScoreResumes = resumes.filter(r => r.analysis && r.analysis.ats_score >= 80).length;
+
     return { totalResumes, analyzedResumes, avgScore, highScoreResumes };
   }, [resumes]);
 
@@ -41,7 +41,7 @@ export function ResumeHeader() {
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Dashboard</span>
           </Button>
-          
+
           <div className="flex items-center space-x-2">
             <Badge variant="outline" className="border-white/30 text-white">
               AI-Powered Analysis
@@ -67,7 +67,7 @@ export function ResumeHeader() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-center space-x-6 text-sm text-blue-200">
             <div className="flex items-center space-x-1">
               <Sparkles className="h-4 w-4" />
@@ -132,9 +132,9 @@ export function ResumeHeader() {
                     {stats.avgScore > 0 ? `${stats.avgScore}/100` : '--'}
                   </p>
                   <p className="text-xs text-blue-300">
-                    {stats.avgScore >= 80 ? 'Excellent performance' : 
-                     stats.avgScore >= 60 ? 'Good, room for improvement' : 
-                     stats.avgScore > 0 ? 'Needs optimization' : 'No data yet'}
+                    {stats.avgScore >= 80 ? 'Excellent performance' :
+                      stats.avgScore >= 60 ? 'Good, room for improvement' :
+                        stats.avgScore > 0 ? 'Needs optimization' : 'No data yet'}
                   </p>
                 </div>
               </div>
@@ -168,20 +168,20 @@ export function ResumeHeader() {
                   <div className="flex items-center space-x-3">
                     <FileText className="h-5 w-5 text-blue-300" />
                     <div>
-                      <p className="font-medium">Currently Selected: {currentResume.filename}</p>
+                      <p className="font-medium">Currently Selected: {currentResume.name}</p>
                       <p className="text-sm text-blue-200">
-                        Uploaded {new Date(currentResume.uploadedAt).toLocaleDateString()}
+                        Uploaded {new Date(currentResume.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  
+
                   {currentResume.analysis && (
                     <div className="flex items-center space-x-2">
-                      <Badge 
-                        variant="outline" 
-                        className={`border-2 ${getScoreColor(currentResume.analysis.atsScore)}`}
+                      <Badge
+                        variant="outline"
+                        className={`border-2 ${getScoreColor(currentResume.analysis.ats_score)}`}
                       >
-                        ATS Score: {currentResume.analysis.atsScore}/100
+                        ATS Score: {currentResume.analysis.ats_score}/100
                       </Badge>
                       <Badge variant="outline" className="border-white/30 text-white">
                         {currentResume.isAnalyzing ? 'Analyzing...' : 'Analysis Complete'}

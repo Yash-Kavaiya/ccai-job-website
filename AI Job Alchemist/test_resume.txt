@@ -1,0 +1,25 @@
+
+John Doe
+Software Engineer
+
+Contact: john.doe@example.com | 123-456-7890
+
+Summary:
+Experienced Software Engineer with a passion for building scalable web applications. Proficient in Python, JavaScript, and Cloud technologies.
+
+Experience:
+Senior Software Engineer | Tech Corp
+2020 - Present
+- Led development of microservices architecture using FastAPI and Docker.
+- Improved system performance by 30% through caching strategies.
+- Mentored junior developers and conducted code reviews.
+
+Education:
+B.S. Computer Science | University of Technology
+2016 - 2020
+
+Skills:
+- Python, JavaScript, TypeScript
+- React, FastAPI, Node.js
+- AWS, Docker, Kubernetes
+- SQL, NoSQL

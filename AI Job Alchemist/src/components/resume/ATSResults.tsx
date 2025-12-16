@@ -74,7 +74,7 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
   return (
     <div className="space-y-6">
       {/* Overall ATS Score - Enhanced */}
-      <Card className={`${getScoreBg(analysis.atsScore)} border-2 shadow-lg`}>
+      <Card className={`${getScoreBg(analysis.ats_score)} border-2 shadow-lg`}>
         <CardHeader className="text-center pb-2">
           <CardTitle className="flex items-center justify-center space-x-2 text-xl">
             <div className="p-2 bg-white rounded-full">
@@ -84,15 +84,15 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center">
-          <div className={`text-7xl font-bold ${getScoreColor(analysis.atsScore)} mb-4`}>
-            {analysis.atsScore}
+          <div className={`text-7xl font-bold ${getScoreColor(analysis.ats_score)} mb-4`}>
+            {analysis.ats_score}
             <span className="text-3xl">/100</span>
           </div>
-          <Progress value={analysis.atsScore} className="w-full max-w-md mx-auto mb-4 h-3" />
+          <Progress value={analysis.ats_score} className="w-full max-w-md mx-auto mb-4 h-3" />
           <p className="text-base font-medium mb-2">
-            {analysis.atsScore >= 80 ? '🎉 Excellent! Your resume is highly ATS-friendly' :
-             analysis.atsScore >= 60 ? '👍 Good score with room for improvement' :
-             '⚠️ Needs optimization for better ATS compatibility'}
+            {analysis.ats_score >= 80 ? '🎉 Excellent! Your resume is highly ATS-friendly' :
+              analysis.ats_score >= 60 ? '👍 Good score with room for improvement' :
+                '⚠️ Needs optimization for better ATS compatibility'}
           </p>
           <p className="text-sm text-muted-foreground">
             Based on analysis of top AI/ML job requirements at leading companies
@@ -175,25 +175,25 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2 text-green-600">
                   <CheckCircle className="h-5 w-5" />
-                  <span>Skills Detected ({(analysis.skillsFound || []).length})</span>
+                  <span>Skills Detected ({(analysis.keyword_matches || []).length})</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {(analysis.skillsFound || []).map((skill, index) => (
+                  {(analysis.keyword_matches || []).map((skill, index) => (
                     <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
                       {skill}
                     </Badge>
                   ))}
                 </div>
-                {(analysis.skillsFound || []).length === 0 && (
+                {(analysis.keyword_matches || []).length === 0 && (
                   <p className="text-sm text-muted-foreground">No technical skills detected</p>
                 )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Missing Skills & Keyword Density */}  
+          {/* Missing Skills & Keyword Density */}
           <div className="grid md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -204,7 +204,7 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {(analysis.missingSkills || []).map((skill, index) => (
+                  {(analysis.missing_keywords || []).map((skill, index) => (
                     <Badge key={index} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
                       {skill}
                     </Badge>
@@ -227,8 +227,8 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
                       <span className="text-sm font-medium">{keyword}</span>
                       <div className="flex items-center space-x-2">
                         <div className="w-20 bg-muted rounded-full h-2">
-                          <div 
-                            className="bg-primary h-2 rounded-full" 
+                          <div
+                            className="bg-primary h-2 rounded-full"
                             style={{ width: `${Math.min(100, (count / 10) * 100)}%` }}
                           ></div>
                         </div>
@@ -422,8 +422,8 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
         {/* AI Suggestions Tab */}
         <TabsContent value="suggestions" className="space-y-6">
           <SuggestionsGenerator
-            currentSkills={analysis.skillsFound || []}
-            missingSkills={analysis.missingSkills || []}
+            currentSkills={analysis.keyword_matches || []}
+            missingSkills={analysis.missing_keywords || []}
             industryFocus="AI/ML Engineering"
           />
         </TabsContent>
@@ -431,8 +431,8 @@ export function ATSResults({ analysis, isAnalyzing }: ATSResultsProps) {
         {/* AI Project Generator Tab */}
         <TabsContent value="projects" className="space-y-6">
           <AIProjectGenerator
-            userSkills={analysis.skillsFound || []}
-            missingSkills={analysis.missingSkills || []}
+            userSkills={analysis.keyword_matches || []}
+            missingSkills={analysis.missing_keywords || []}
             targetRoles={['AI Engineer', 'ML Engineer', 'Google CCAI', 'Microsoft Copilot', 'Amazon Lex']}
           />
         </TabsContent>

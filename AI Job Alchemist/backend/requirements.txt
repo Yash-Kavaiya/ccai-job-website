@@ -1,54 +1,42 @@
 # FastAPI & Server
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-python-multipart==0.0.18
+fastapi>=0.115.6
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.18
 
 # Firebase
-firebase-admin==6.6.0
+firebase-admin>=6.6.0
 
 # Qdrant Vector Database
-qdrant-client==1.12.1
+qdrant-client>=1.12.1
 
 # AI/ML for embeddings
-openai==1.58.1
-sentence-transformers==3.3.1
+openai>=1.58.1
+sentence-transformers>=3.3.1
 
 # Validation & Settings
-pydantic==2.10.3
-pydantic-settings==2.6.1
-email-validator==2.2.0
+pydantic>=2.10.3
+pydantic-settings>=2.6.1
+email-validator>=2.2.0
 
 # Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
 
 # Async utilities
-httpx==0.28.1
-aiofiles==24.1.0
+httpx>=0.28.1
+aiofiles>=24.1.0
 
 # Utilities
-python-dotenv==1.0.1
+python-dotenv>=1.0.1
 
 # PDF & Document Processing
-PyPDF2==3.0.1
-pdfplumber==0.11.4
-python-docx==1.1.2
+PyPDF2>=3.0.1
+pdfplumber>=0.11.4
+python-docx>=1.1.2
 
 # NLP & Text Processing
-spacy==3.8.3
-nltk==3.9.1
+spacy>=3.8.2
+nltk>=3.9.1
 
 # AI Analysis
-google-generativeai==0.8.3
-
-# PDF & Document Processing
-PyPDF2==3.0.1
-pdfplumber==0.11.4
-python-docx==1.1.2
-
-# NLP & Text Processing
-spacy==3.8.2
-nltk==3.9.1
-
-# AI Analysis
-google-generativeai==0.8.3
+google-generativeai>=0.8.3

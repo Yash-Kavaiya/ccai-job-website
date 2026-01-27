@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { cn } from '@/lib/utils';
+import { RecruiterSidebar } from './RecruiterSidebar';
+import { useAuthStore } from '@/store/auth-store';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -9,26 +10,30 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuthStore();
+
+  const isRecruiter = user?.role === 'recruiter';
+  const SidebarComponent = isRecruiter ? RecruiterSidebar : Sidebar;
 
   return (
     <div className="min-h-screen bg-background">
       <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      
+
       <div className="flex">
         {/* Desktop Sidebar */}
         <aside className="hidden md:block">
-          <Sidebar />
+          <SidebarComponent />
         </aside>
 
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 md:hidden">
-            <div 
-              className="absolute inset-0 bg-black/50" 
+            <div
+              className="absolute inset-0 bg-black/50"
               onClick={() => setSidebarOpen(false)}
             />
             <div className="absolute left-0 top-16 bottom-0">
-              <Sidebar />
+              <SidebarComponent />
             </div>
           </div>
         )}

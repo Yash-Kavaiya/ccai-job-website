@@ -206,3 +206,11 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 node_modules
+
+# Firebase/Google Cloud service account files - NEVER commit these
+**/firebase-service-account*.json
+**/firebase-adminsdk*.json
+**/*-firebase-adminsdk-*.json
+*service-account*.json
+*.pem
+*.p12

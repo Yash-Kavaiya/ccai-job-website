@@ -2,12 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  Brain, 
-  Search, 
-  FileText, 
-  MessageSquare, 
-  TrendingUp, 
+import {
+  Brain,
+  Search,
+  FileText,
+  MessageSquare,
+  TrendingUp,
   Users,
   Zap,
   Target,
@@ -30,18 +30,17 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+
 
 export function HomePage() {
   const { isAuthenticated } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  
+
   if (isAuthenticated) {
     // Redirect to dashboard - this will be handled by routing
     return null;
@@ -62,18 +61,19 @@ export function HomePage() {
   };
 
   const handleStartJourney = () => {
-    setShowAuthModal(true);
-    setAuthMode('signup');
+    navigate('/signup');
   };
 
   const handleSignIn = () => {
-    setShowAuthModal(true);
-    setAuthMode('login');
+    navigate('/login');
   };
 
   const handleSignUp = () => {
-    setShowAuthModal(true);
-    setAuthMode('signup');
+    navigate('/signup');
+  };
+
+  const handleRecruiterSignUp = () => {
+    navigate('/recruiter/signup');
   };
 
   const handleJobClick = (job: any) => {
@@ -84,7 +84,7 @@ export function HomePage() {
     {
       icon: Brain,
       title: 'AI-Powered Job Matching',
-      description: 'Advanced algorithms match you with perfect AI roles at top companies like Google, Microsoft, and Amazon.',
+      description: 'Advanced algorithms match you with perfect AI roles at top leading tech and AI companies.',
       badge: 'Smart'
     },
     {
@@ -96,7 +96,7 @@ export function HomePage() {
     {
       icon: MessageSquare,
       title: 'Mock AI Interviews',
-      description: 'Practice with AI interviewers for roles in CCAI, Copilot development, Amazon Lex, and more.',
+      description: 'Practice with AI interviewers for roles in CCAI, Copilot development, Lex, and more.',
       badge: 'Beta'
     },
     {
@@ -127,9 +127,9 @@ export function HomePage() {
   ];
 
   const specializations = [
-    'Google Cloud CCAI',
-    'Microsoft Copilots',
-    'Amazon Lex',
+    'Contact Center AI',
+    'AI Copilots',
+    'Conversational AI (Lex)',
     'Dialogflow',
     'OpenAI Integration',
     'LangChain',
@@ -141,8 +141,8 @@ export function HomePage() {
 
   const featuredJobs = [
     {
-      title: 'Microsoft Copilot Engineer',
-      company: 'Microsoft',
+      title: 'Copilot Engineer',
+      company: 'Global Tech Giant',
       location: 'Seattle, WA',
       salary: '$150K - $200K',
       type: 'Full-time',
@@ -151,8 +151,8 @@ export function HomePage() {
       match: 95
     },
     {
-      title: 'Google CCAI Specialist',
-      company: 'Google',
+      title: 'CCAI Specialist',
+      company: 'Leading AI Company',
       location: 'Mountain View, CA',
       salary: '$160K - $220K',
       type: 'Full-time',
@@ -161,8 +161,8 @@ export function HomePage() {
       match: 92
     },
     {
-      title: 'Amazon Lex Developer',
-      company: 'Amazon',
+      title: 'Lex Developer',
+      company: 'Major Tech Company',
       location: 'Austin, TX',
       salary: '$140K - $185K',
       type: 'Full-time',
@@ -239,7 +239,7 @@ export function HomePage() {
                     </div>
                     <span className="font-bold text-xl">AIJobHub</span>
                   </div>
-                  
+
                   <nav className="flex flex-col gap-4">
                     <a href="#features" className="text-sm font-medium hover:text-accent transition-colors">
                       Features
@@ -289,7 +289,7 @@ export function HomePage() {
                   </span>
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                  The only platform specialized for AI careers. Get matched with roles at Google, Microsoft, Amazon, and top AI companies using advanced algorithms and automated tools.
+                  The only platform specialized for AI careers. Get matched with roles at top leading tech and AI companies using advanced algorithms and automated tools.
                 </p>
               </div>
 
@@ -334,7 +334,7 @@ export function HomePage() {
                     Search Jobs
                   </Button>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button size="lg" variant="ghost" className="gap-2" onClick={handleUploadResume}>
                     <Upload className="w-4 h-4" />
@@ -530,7 +530,7 @@ export function HomePage() {
                   Connect with AI professionals at FAANG companies and leading AI startups worldwide.
                 </CardDescription>
               </CardContent>
-              </Card>
+            </Card>
 
             <Card className="text-center border-0 shadow-lg">
               <CardHeader>
@@ -661,6 +661,46 @@ export function HomePage() {
         </div>
       </section>
 
+      {/* Recruiter Section */}
+      <section className="py-20 bg-card">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-12 bg-accent/5 rounded-3xl p-8 md:p-12 border border-accent/10">
+            <div className="space-y-6 max-w-2xl">
+              <Badge className="ai-gradient text-white border-0">For Employers</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold">
+                Are you a Recruiter?
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Find the perfect AI talent for your team. Our advanced matching algorithms connect you with pre-vetted candidates specialized in Generative AI, LLMs, and Computer Vision.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-2 text-foreground/80">
+                  <CheckCircle className="w-5 h-5 text-accent" />
+                  <span>Access top 1% of AI talent</span>
+                </li>
+                <li className="flex items-center gap-2 text-foreground/80">
+                  <CheckCircle className="w-5 h-5 text-accent" />
+                  <span>AI-powered candidate matching</span>
+                </li>
+                <li className="flex items-center gap-2 text-foreground/80">
+                  <CheckCircle className="w-5 h-5 text-accent" />
+                  <span>Reduce time-to-hire by 50%</span>
+                </li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-4 w-full md:w-auto min-w-[200px]">
+              <Button size="lg" className="ai-gradient text-white border-0 gap-2 w-full" onClick={handleRecruiterSignUp}>
+                <Users className="w-5 h-5" />
+                Hiring with us
+              </Button>
+              <Button size="lg" variant="outline" className="gap-2 w-full">
+                Contact Sales
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 ai-gradient">
         <div className="container mx-auto px-4 text-center">
@@ -701,66 +741,6 @@ export function HomePage() {
           </div>
         </div>
       </footer>
-
-      {/* Authentication Modal */}
-      <Sheet open={showAuthModal} onOpenChange={setShowAuthModal}>
-        <SheetContent side="right" className="w-full sm:w-96 sm:max-w-md">
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 ai-gradient rounded-lg flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-bold text-lg">AIJobHub</span>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={authMode === 'login' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setAuthMode('login')}
-                >
-                  Sign In
-                </Button>
-                <Button
-                  variant={authMode === 'signup' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setAuthMode('signup')}
-                >
-                  Sign Up
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex-1">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-2">
-                  {authMode === 'login' ? 'Welcome back!' : 'Join AIJobHub'}
-                </h2>
-                <p className="text-muted-foreground">
-                  {authMode === 'login' 
-                    ? 'Sign in to continue your AI career journey' 
-                    : 'Start your AI career journey today'
-                  }
-                </p>
-              </div>
-              
-              <LoginForm />
-              
-              <div className="mt-6 pt-6 border-t text-center">
-                <p className="text-sm text-muted-foreground">
-                  {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
-                  <button
-                    onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                    className="text-accent hover:underline font-medium"
-                  >
-                    {authMode === 'login' ? 'Sign up' : 'Sign in'}
-                  </button>
-                </p>
-              </div>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

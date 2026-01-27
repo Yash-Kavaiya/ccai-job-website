@@ -1,0 +1,24 @@
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.*
+*.md
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# Firebase service account files - NEVER include in Docker image
+**/firebase-service-account*.json
+**/firebase-adminsdk*.json
+**/*-firebase-adminsdk-*.json
+*service-account*.json
+*.pem
+*.p12

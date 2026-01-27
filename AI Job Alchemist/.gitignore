@@ -25,6 +25,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Firebase Keys
+# Firebase Keys - NEVER commit service account files
 backend/firebase-service-account.json
-ccai-job-website-firebase-adminsdk-fbsvc-46bec8ca13.json
+**/firebase-service-account*.json
+**/firebase-adminsdk*.json
+**/*-firebase-adminsdk-*.json
+*service-account*.json
+*.pem
+*.p12

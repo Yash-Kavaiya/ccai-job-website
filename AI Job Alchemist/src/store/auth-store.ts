@@ -8,13 +8,16 @@ import {
   User as FirebaseUser,
   GithubAuthProvider
 } from 'firebase/auth';
-import { auth, githubProvider } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, githubProvider, db } from '@/lib/firebase';
 
 interface User {
   uid: string;
   name: string | null;
   email: string | null;
   photoURL: string | null;
+  role?: 'candidate' | 'recruiter';
+  onboardingComplete?: boolean;
 }
 
 interface AuthState {
@@ -24,19 +27,27 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  loginWithGithub: () => Promise<void>;
+  loginWithGoogle: (role?: 'candidate' | 'recruiter') => Promise<void>;
+  loginWithGithub: (role?: 'candidate' | 'recruiter') => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  signupWithEmail: (email: string, password: string) => Promise<void>;
+  signupWithEmail: (email: string, password: string, role?: 'candidate' | 'recruiter') => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User | null) => void;
+  setOnboardingComplete: () => void;
 }
 
-const mapFirebaseUser = (user: FirebaseUser): User => ({
+const mapFirebaseUser = (
+  user: FirebaseUser,
+  role?: 'candidate' | 'recruiter',
+  onboardingComplete?: boolean
+): User => ({
   uid: user.uid,
   name: user.displayName,
   email: user.email,
   photoURL: user.photoURL,
+  role: role,
+  onboardingComplete: role === 'candidate' ? true : onboardingComplete ?? false
 });
 
 export const useAuthStore = create<AuthState>()(
@@ -47,17 +58,86 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      loginWithGithub: async () => {
+      loginWithGoogle: async (role) => {
+        set({ isLoading: true, error: null });
+        try {
+          const result = await signInWithPopup(auth, googleProvider);
+          const user = result.user;
+
+          // Check/Create user in Firestore
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          let userRole = role;
+          let onboardingComplete = true; // Default for candidates
+
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            userRole = userData.role as 'candidate' | 'recruiter';
+            onboardingComplete = userData.onboardingComplete ?? (userRole === 'candidate');
+          } else {
+            // If no role provided for new user, default to candidate
+            userRole = role || 'candidate';
+            onboardingComplete = userRole === 'candidate'; // Candidates don't need onboarding
+            await setDoc(userDocRef, {
+              uid: user.uid,
+              email: user.email,
+              name: user.displayName,
+              photoURL: user.photoURL,
+              role: userRole,
+              onboardingComplete: onboardingComplete,
+              createdAt: new Date().toISOString()
+            });
+          }
+
+          set({
+            user: mapFirebaseUser(user, userRole, onboardingComplete),
+            isAuthenticated: true,
+            isLoading: false
+          });
+        } catch (error: any) {
+          console.error('Google login failed:', error);
+          set({
+            isLoading: false,
+            error: error.message || 'Failed to login with Google'
+          });
+          throw error;
+        }
+      },
+
+      loginWithGithub: async (role) => {
         set({ isLoading: true, error: null });
         try {
           const result = await signInWithPopup(auth, githubProvider);
-          // This gives you a GitHub Access Token. You can use it to access the GitHub API.
-          const credential = GithubAuthProvider.credentialFromResult(result);
-          const token = credential?.accessToken;
-
           const user = result.user;
+
+          // Check/Create user in Firestore
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          let userRole = role;
+          let onboardingComplete = true;
+
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            userRole = userData.role as 'candidate' | 'recruiter';
+            onboardingComplete = userData.onboardingComplete ?? (userRole === 'candidate');
+          } else {
+            userRole = role || 'candidate';
+            onboardingComplete = userRole === 'candidate';
+            await setDoc(userDocRef, {
+              uid: user.uid,
+              email: user.email,
+              name: user.displayName,
+              photoURL: user.photoURL,
+              role: userRole,
+              onboardingComplete: onboardingComplete,
+              createdAt: new Date().toISOString()
+            });
+          }
+
           set({
-            user: mapFirebaseUser(user),
+            user: mapFirebaseUser(user, userRole, onboardingComplete),
             isAuthenticated: true,
             isLoading: false
           });
@@ -75,8 +155,21 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const result = await signInWithEmailAndPassword(auth, email, password);
+
+          // Fetch role and onboarding status from Firestore
+          const userDocRef = doc(db, 'users', result.user.uid);
+          const userDoc = await getDoc(userDocRef);
+          let role: 'candidate' | 'recruiter' | undefined;
+          let onboardingComplete = true;
+
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            role = userData.role as 'candidate' | 'recruiter';
+            onboardingComplete = userData.onboardingComplete ?? (role === 'candidate');
+          }
+
           set({
-            user: mapFirebaseUser(result.user),
+            user: mapFirebaseUser(result.user, role, onboardingComplete),
             isAuthenticated: true,
             isLoading: false
           });
@@ -90,12 +183,25 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signupWithEmail: async (email, password) => {
+      signupWithEmail: async (email, password, role = 'candidate') => {
         set({ isLoading: true, error: null });
         try {
           const result = await createUserWithEmailAndPassword(auth, email, password);
+
+          // Candidates don't need onboarding, recruiters do
+          const onboardingComplete = role === 'candidate';
+
+          // Save user to Firestore
+          await setDoc(doc(db, 'users', result.user.uid), {
+            uid: result.user.uid,
+            email: result.user.email,
+            role: role,
+            onboardingComplete: onboardingComplete,
+            createdAt: new Date().toISOString()
+          });
+
           set({
-            user: mapFirebaseUser(result.user),
+            user: mapFirebaseUser(result.user, role, onboardingComplete),
             isAuthenticated: true,
             isLoading: false
           });
@@ -132,6 +238,10 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: !!user,
         isLoading: false
       }),
+
+      setOnboardingComplete: () => set((state) => ({
+        user: state.user ? { ...state.user, onboardingComplete: true } : null
+      })),
     }),
     {
       name: 'aijobhub-auth',
@@ -145,12 +255,29 @@ export const useAuthStore = create<AuthState>()(
 
 // Subscribe to auth state changes to keep store in sync
 import { onAuthStateChanged } from 'firebase/auth';
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   const store = useAuthStore.getState();
   if (user) {
-    store.setUser(mapFirebaseUser(user));
+    // Fetch role and onboarding status from Firestore
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      let role: 'candidate' | 'recruiter' | undefined;
+      let onboardingComplete = true;
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        role = userData.role as 'candidate' | 'recruiter';
+        onboardingComplete = userData.onboardingComplete ?? (role === 'candidate');
+      }
+
+      store.setUser(mapFirebaseUser(user, role, onboardingComplete));
+    } catch (e) {
+      console.error("Failed to fetch user profile on auth state change", e);
+      // Fallback to minimal user info if firestore fails
+      store.setUser(mapFirebaseUser(user));
+    }
   } else {
-    // Only clear if we were previously authenticated to avoid loops or unnecessary updates
     if (store.isAuthenticated) {
       store.setUser(null);
     }

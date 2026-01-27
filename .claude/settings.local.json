@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run dev:*)",
-      "Bash(claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key ctx7sk-b34a76fd-75e7-45bb-985c-32422b98b594)"
+      "Bash(claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key ctx7sk-b34a76fd-75e7-45bb-985c-32422b98b594)",
+      "Bash(npx playwright test:*)"
     ]
   }
 }

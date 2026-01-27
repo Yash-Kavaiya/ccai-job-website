@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "ccai-job-website"
+  },
   "targets": {},
   "etags": {}
 }

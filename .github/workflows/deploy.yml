@@ -24,12 +24,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud (WIF)
+      - name: Debug Secret Presence
+        env:
+          SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          if [ -n "$SA_KEY" ]; then
+            echo "GCP_SA_KEY is set (length: ${#SA_KEY})"
+          else
+            echo "::error::GCP_SA_KEY is empty or not set!"
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -52,7 +62,7 @@ jobs:
             --build-arg VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }} \
             -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:latest \
-            .
+            "AI Job Alchemist"
 
       - name: Push Docker image to Artifact Registry
         run: |

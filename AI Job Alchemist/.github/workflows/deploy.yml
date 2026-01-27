@@ -21,8 +21,17 @@ jobs:
       id-token: write  # Required for WIF
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Debug Secret Presence
+        env:
+          SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          if [ -n "$SA_KEY" ]; then
+            echo "GCP_SA_KEY is set (length: ${#SA_KEY})"
+          else
+            echo "::error::GCP_SA_KEY is empty or not set!"
+            exit 1
+          fi
+
 
       - name: Authenticate to Google Cloud (WIF)
         id: auth

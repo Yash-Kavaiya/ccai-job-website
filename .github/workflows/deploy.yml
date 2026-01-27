@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: ccai-job-website
   REGION: us-central1
   SERVICE_NAME: ai-job-alchemist
   ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
@@ -24,15 +24,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Debug Secret Presence
         env:
           SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
         run: |
           if [ -n "$SA_KEY" ]; then
             echo "GCP_SA_KEY is set (length: ${#SA_KEY})"
           else
             echo "::error::GCP_SA_KEY is empty or not set!"
             exit 1
+          fi
+          
+          if [ -z "$API_KEY" ]; then
+             echo "::warning::VITE_FIREBASE_API_KEY is missing! The app may not work."
           fi
 
       - name: Authenticate to Google Cloud
@@ -55,7 +59,7 @@ jobs:
           docker build \
             --build-arg VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }} \
             --build-arg VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }} \
-            --build-arg VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }} \
+            --build-arg VITE_FIREBASE_PROJECT_ID=ccai-job-website \
             --build-arg VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }} \
             --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }} \
             --build-arg VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }} \

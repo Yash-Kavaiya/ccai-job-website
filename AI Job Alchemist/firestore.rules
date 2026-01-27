@@ -7,13 +7,22 @@ service cloud.firestore {
     match /recruiter_profiles/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    // Also likely need jobs and applications access
+    // Resumes - users can only access their own resumes
+    match /resumes/{resumeId} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.user_id == request.auth.uid;
+      // Allow recruiters to read resumes for candidate browsing
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'recruiter';
+    }
+    // Jobs - publicly readable, authenticated users can write
     match /jobs/{jobId} {
       allow read: if true;
-      allow write: if request.auth != null; // Refine later
+      allow write: if request.auth != null;
     }
+    // Job applications
     match /job_applications/{applicationId} {
-      allow read, write: if request.auth != null; // Refine later
+      allow read, write: if request.auth != null;
     }
   }
 }

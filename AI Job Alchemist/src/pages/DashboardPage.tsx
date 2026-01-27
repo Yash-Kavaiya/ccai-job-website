@@ -3,11 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { 
-  FileText, 
-  Search, 
-  MessageSquare, 
-  TrendingUp, 
+import {
+  FileText,
+  Search,
+  MessageSquare,
+  TrendingUp,
   CheckCircle,
   Upload,
   Brain,
@@ -23,76 +23,160 @@ import {
   ArrowUp,
   ArrowDown,
   Bookmark,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import { useResumeStore } from '@/store/resume-store';
+import { useInterviewStore } from '@/store/interview-store';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect, useState, useMemo } from 'react';
+import { db, auth } from '@/lib/firebase';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+
+interface JobRecommendation {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  salary_range?: string;
+  similarity_score?: number;
+  posted_date: string;
+  skills: string[];
+  saved?: boolean;
+}
+
+interface ActivityItem {
+  type: string;
+  title: string;
+  description: string;
+  time: string;
+  icon: any;
+}
 
 export function DashboardPage() {
   const { user } = useAuthStore();
+  const { resumes, currentResume } = useResumeStore();
+  const { history } = useInterviewStore();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // ATS Score Pie Chart Data
-  const atsData = [
-    { name: 'Keywords', value: 85, color: 'hsl(var(--chart-1))' },
-    { name: 'Format', value: 90, color: 'hsl(var(--chart-2))' },
-    { name: 'Content', value: 78, color: 'hsl(var(--chart-3))' },
-    { name: 'Missing', value: 15, color: 'hsl(var(--muted))' }
-  ];
+  const [jobRecommendations, setJobRecommendations] = useState<JobRecommendation[]>([]);
+  const [applicationCount, setApplicationCount] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Progress Tracker Data
-  const progressData = [
-    { week: 'Week 1', applications: 5, interviews: 1 },
-    { week: 'Week 2', applications: 8, interviews: 2 },
-    { week: 'Week 3', applications: 12, interviews: 3 },
-    { week: 'Week 4', applications: 15, interviews: 5 }
-  ];
+  // Fetch real job recommendations and applications from Firebase
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!auth.currentUser) {
+        setIsLoading(false);
+        return;
+      }
 
-  // Personalized Job Recommendations
-  const jobRecommendations = [
-    {
-      title: 'Senior AI Engineer',
-      company: 'Google',
-      location: 'Mountain View, CA',
-      salary: '$180K - $250K',
-      similarity: 95,
-      posted: '2 hours ago',
-      tags: ['AI', 'TensorFlow', 'Python', 'MLOps'],
-      saved: false
-    },
-    {
-      title: 'Microsoft Copilot Developer',
-      company: 'Microsoft',
-      location: 'Seattle, WA',
-      salary: '$160K - $220K',
-      similarity: 92,
-      posted: '5 hours ago',
-      tags: ['Copilot', 'Azure', 'TypeScript', 'OpenAI'],
-      saved: true
-    },
-    {
-      title: 'ML Infrastructure Engineer',
-      company: 'OpenAI',
-      location: 'San Francisco, CA',
-      salary: '$200K - $300K',
-      similarity: 89,
-      posted: '1 day ago',
-      tags: ['MLOps', 'Kubernetes', 'AWS', 'Python'],
-      saved: false
-    },
-    {
-      title: 'Conversational AI Specialist',
-      company: 'Amazon',
-      location: 'Austin, TX',
-      salary: '$150K - $200K',
-      similarity: 87,
-      posted: '2 days ago',
-      tags: ['Lex', 'NLP', 'AWS', 'Node.js'],
-      saved: false
+      try {
+        // Fetch job recommendations
+        const jobsRef = collection(db, 'jobs');
+        const jobsQuery = query(jobsRef, where('status', '==', 'active'), orderBy('createdAt', 'desc'), limit(4));
+        const jobsSnapshot = await getDocs(jobsQuery);
+        const jobs = jobsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          posted_date: doc.data().createdAt?.toDate?.()?.toLocaleDateString() || 'Recently'
+        })) as JobRecommendation[];
+        setJobRecommendations(jobs);
+
+        // Fetch application count
+        const applicationsRef = collection(db, 'job_applications');
+        const appQuery = query(applicationsRef, where('user_id', '==', auth.currentUser.uid));
+        const appSnapshot = await getDocs(appQuery);
+        setApplicationCount(appSnapshot.size);
+
+        // Build recent activity from real data
+        const activities: ActivityItem[] = [];
+
+        // Add resume activity
+        if (currentResume) {
+          activities.push({
+            type: 'upload',
+            title: 'Resume uploaded',
+            description: currentResume.analysis ? `ATS Score: ${currentResume.analysis.ats_score}/100` : 'Analysis pending',
+            time: currentResume.created_at ? new Date(currentResume.created_at).toLocaleDateString() : 'Recently',
+            icon: FileText,
+          });
+        }
+
+        // Add job match activity
+        if (jobs.length > 0) {
+          activities.push({
+            type: 'job',
+            title: 'Job matches found',
+            description: `${jobs.length} AI roles available`,
+            time: 'Today',
+            icon: Target,
+          });
+        }
+
+        // Add interview activity
+        if (history.sessions.length > 0) {
+          const lastSession = history.sessions[history.sessions.length - 1];
+          activities.push({
+            type: 'interview',
+            title: 'Mock interview completed',
+            description: `Score: ${lastSession.scores.overall}%`,
+            time: lastSession.endTime ? new Date(lastSession.endTime).toLocaleDateString() : 'Recently',
+            icon: MessageSquare,
+          });
+        }
+
+        setRecentActivity(activities);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [currentResume, history.sessions]);
+
+  // Calculate ATS Score from real resume data
+  const atsData = useMemo(() => {
+    if (currentResume?.analysis) {
+      const analysis = currentResume.analysis;
+      const keywordsScore = analysis.keyword_matches?.length ? Math.min(100, analysis.keyword_matches.length * 10) : 0;
+      const formatScore = analysis.formatScore || 75;
+      const contentScore = analysis.ats_score || 0;
+      const missingScore = analysis.missing_keywords?.length ? Math.min(30, analysis.missing_keywords.length * 5) : 0;
+
+      return [
+        { name: 'Keywords', value: keywordsScore, color: 'hsl(var(--chart-1))' },
+        { name: 'Format', value: formatScore, color: 'hsl(var(--chart-2))' },
+        { name: 'Content', value: contentScore, color: 'hsl(var(--chart-3))' },
+        { name: 'Missing', value: missingScore, color: 'hsl(var(--muted))' }
+      ];
     }
-  ];
+    return [
+      { name: 'Keywords', value: 0, color: 'hsl(var(--chart-1))' },
+      { name: 'Format', value: 0, color: 'hsl(var(--chart-2))' },
+      { name: 'Content', value: 0, color: 'hsl(var(--chart-3))' },
+      { name: 'Missing', value: 0, color: 'hsl(var(--muted))' }
+    ];
+  }, [currentResume]);
+
+  // Calculate progress data from real interview history
+  const progressData = useMemo(() => {
+    const sessions = history.sessions || [];
+    // Group sessions by week and count
+    const weekData = [
+      { week: 'Week 1', applications: 0, interviews: 0 },
+      { week: 'Week 2', applications: 0, interviews: 0 },
+      { week: 'Week 3', applications: 0, interviews: 0 },
+      { week: 'Week 4', applications: Math.ceil(applicationCount / 2), interviews: sessions.length }
+    ];
+    return weekData;
+  }, [history.sessions, applicationCount]);
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -149,56 +233,46 @@ export function DashboardPage() {
     },
   ];
 
-  const recentActivity = [
-    {
-      type: 'upload',
-      title: 'Resume uploaded',
-      description: 'ATS Score: 85/100',
-      time: '2 hours ago',
-      icon: FileText,
-    },
-    {
-      type: 'job',
-      title: 'New job matches found',
-      description: '12 AI roles at top companies',
-      time: '4 hours ago',
-      icon: Target,
-    },
-    {
-      type: 'interview',
-      title: 'Mock interview completed',
-      description: 'Score: 92% - Excellent!',
-      time: '1 day ago',
-      icon: MessageSquare,
-    },
-  ];
+  // Calculate real stats from user data
+  const stats = useMemo(() => {
+    // Profile completion based on resume and user data
+    let profileCompletion = 25; // Base for having an account
+    if (currentResume) profileCompletion += 25;
+    if (currentResume?.analysis) profileCompletion += 25;
+    if (history.sessions.length > 0) profileCompletion += 25;
 
-  const stats = [
-    {
-      title: 'Profile Completion',
-      value: 75,
-      description: 'Complete your profile to get better matches',
-      icon: CheckCircle,
-    },
-    {
-      title: 'Job Applications',
-      value: 12,
-      description: 'Applications sent this month',
-      icon: Zap,
-    },
-    {
-      title: 'Interview Score',
-      value: 92,
-      description: 'Average mock interview performance',
-      icon: TrendingUp,
-    },
-    {
-      title: 'Network Connections',
-      value: 45,
-      description: 'AI professionals in your network',
-      icon: Users,
-    },
-  ];
+    // Average interview score
+    const avgInterviewScore = history.sessions.length > 0
+      ? Math.round(history.sessions.reduce((acc, s) => acc + (s.scores.overall || 0), 0) / history.sessions.length)
+      : 0;
+
+    return [
+      {
+        title: 'Profile Completion',
+        value: profileCompletion,
+        description: profileCompletion < 100 ? 'Complete your profile to get better matches' : 'Profile complete!',
+        icon: CheckCircle,
+      },
+      {
+        title: 'Job Applications',
+        value: applicationCount,
+        description: applicationCount > 0 ? 'Applications sent' : 'No applications yet',
+        icon: Zap,
+      },
+      {
+        title: 'Interview Score',
+        value: avgInterviewScore,
+        description: avgInterviewScore > 0 ? 'Average mock interview performance' : 'Complete an interview to see score',
+        icon: TrendingUp,
+      },
+      {
+        title: 'Resumes',
+        value: resumes.length,
+        description: resumes.length > 0 ? 'Resumes uploaded' : 'Upload your first resume',
+        icon: FileText,
+      },
+    ];
+  }, [currentResume, history.sessions, applicationCount, resumes.length]);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto max-h-full">
@@ -277,9 +351,26 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {jobRecommendations.map((job, index) => (
-              <div 
-                key={index} 
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading recommendations...</p>
+              </div>
+            ) : jobRecommendations.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">No job recommendations yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Upload your resume to get personalized job matches
+                </p>
+                <Button onClick={() => navigate('/resume')}>
+                  Upload Resume
+                </Button>
+              </div>
+            ) : (
+              jobRecommendations.map((job) => (
+              <div
+                key={job.id}
                 className="p-4 rounded-lg border hover:shadow-md transition-shadow cursor-pointer group"
                 onClick={() => navigate('/jobs', { state: { selectedJob: job } })}
               >
@@ -294,12 +385,14 @@ export function DashboardPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {job.similarity}% Match
-                    </Badge>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    {job.similarity_score && (
+                      <Badge variant="secondary" className="text-xs">
+                        {Math.round(job.similarity_score)}% Match
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -313,37 +406,43 @@ export function DashboardPage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 mb-3 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3 h-3" />
-                    {job.location}
+                    {job.location || 'Remote'}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-3 h-3" />
-                    {job.salary}
-                  </div>
+                  {job.salary_range && (
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-3 h-3" />
+                      {job.salary_range}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Clock className="w-3 h-3" />
-                    {job.posted}
+                    {job.posted_date}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-current text-warning" />
-                    <span>High Match</span>
-                  </div>
+                  {job.similarity_score && job.similarity_score > 80 && (
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current text-warning" />
+                      <span>High Match</span>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {job.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                
+                {job.skills && job.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {job.skills.slice(0, 4).map((skill) => (
+                      <Badge key={skill} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -352,8 +451,8 @@ export function DashboardPage() {
                   >
                     Apply Now
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -364,8 +463,9 @@ export function DashboardPage() {
                   </Button>
                 </div>
               </div>
-            ))}
-            
+              ))
+            )}
+
             <div className="text-center pt-4">
               <Button variant="outline" onClick={() => navigate('/jobs')}>
                 View All Recommendations

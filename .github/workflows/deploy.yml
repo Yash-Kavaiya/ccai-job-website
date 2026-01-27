@@ -24,6 +24,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug Secret Presence
         env:
           SA_KEY: ${{ secrets.GCP_SA_KEY }}
           API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}

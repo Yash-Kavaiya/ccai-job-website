@@ -68,7 +68,7 @@ export function PostJobPage() {
       const jobId = await createJob({
         ...data,
         requirements: data.requirements.split('\n').filter(r => r.trim()),
-      });
+      } as any);
 
       console.log('Job created with ID:', jobId);
       toast({

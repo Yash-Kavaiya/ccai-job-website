@@ -190,7 +190,7 @@ export const useRecruiterStore = create<RecruiterState>()(
 
           const jobs: JobPosting[] = [];
           querySnapshot.forEach((doc) => {
-            jobs.push({ id: doc.id, ...doc.data() } as JobPosting);
+            jobs.push({ id: doc.id, ...(doc.data() as any) } as JobPosting);
           });
 
           set({ postedJobs: jobs, isLoading: false });
@@ -240,7 +240,7 @@ export const useRecruiterStore = create<RecruiterState>()(
 
           const applications: JobApplication[] = [];
           querySnapshot.forEach((doc) => {
-            applications.push({ id: doc.id, ...doc.data() } as JobApplication);
+            applications.push({ id: doc.id, ...(doc.data() as any) } as JobApplication);
           });
 
           set({ applications, isLoading: false });
@@ -288,7 +288,7 @@ export const useRecruiterStore = create<RecruiterState>()(
 
           const members: TeamMember[] = [];
           querySnapshot.forEach((doc) => {
-            members.push({ id: doc.id, ...doc.data() } as TeamMember);
+            members.push({ id: doc.id, ...(doc.data() as any) } as TeamMember);
           });
 
           set({ teamMembers: members, isLoading: false });

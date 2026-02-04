@@ -133,11 +133,12 @@ export const useResumeStore = create<ResumeStore>()(
             updated_at: new Date().toISOString(),
           };
 
-          // Save to Firestore
-          await setDoc(doc(db, 'resumes', resumeId), {
-            ...newResume,
-            isAnalyzing: undefined, // Don't store this field
-          });
+          // Save to Firestore - filter out undefined values
+          const resumeData = Object.fromEntries(
+            Object.entries(newResume).filter(([_, value]) => value !== undefined)
+          );
+          delete resumeData.isAnalyzing; // Don't store this field
+          await setDoc(doc(db, 'resumes', resumeId), resumeData);
 
           set(state => ({
             resumes: [...state.resumes, newResume],
@@ -170,13 +171,17 @@ export const useResumeStore = create<ResumeStore>()(
           // Perform analysis
           const analysis = performBasicAnalysis(resume.name);
 
-          // Update in Firestore
-          await setDoc(doc(db, 'resumes', resumeId), {
+          // Update in Firestore - filter out undefined values
+          const updateData = {
             ...resume,
             analysis,
             updated_at: new Date().toISOString(),
-            isAnalyzing: undefined,
-          }, { merge: true });
+          };
+          delete (updateData as any).isAnalyzing;
+          const cleanData = Object.fromEntries(
+            Object.entries(updateData).filter(([_, value]) => value !== undefined)
+          );
+          await setDoc(doc(db, 'resumes', resumeId), cleanData, { merge: true });
 
           set(state => ({
             resumes: state.resumes.map(r =>

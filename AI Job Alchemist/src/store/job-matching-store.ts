@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { table, webSearch, DevvAI, OpenRouterAI } from '@devvai/devv-code-backend';
 import { useAuthStore } from './auth-store';
+import { jobService, Job as FirebaseJob } from '@/services/jobService';
 
 interface JobSource {
   id: string;
@@ -446,7 +447,7 @@ export const useJobMatchingStore = create<JobMatchingState>()(
       dailyApplicationCount: 0,
       applicationLimit: 10, // Compliance: 10 applies per day limit
 
-      // Enhanced search jobs using web search API with comprehensive aggregation
+      // Fetch jobs from Firebase Firestore
       searchJobs: async (query: string) => {
         set({ loading: true, error: null, searchQuery: query });
 
@@ -457,260 +458,129 @@ export const useJobMatchingStore = create<JobMatchingState>()(
             set({ searchHistory: [query, ...history.slice(0, 9)] });
           }
 
-          const newJobs: JobListing[] = [];
-
-          // Enhanced search queries for comprehensive job discovery
-          const searchQueries = [
-            `"${query}" AI jobs 2024`,
-            `"${query}" machine learning jobs remote`,
-            `"${query}" artificial intelligence careers`,
-            `site:linkedin.com/jobs "${query}" AI`,
-            `site:indeed.com "${query}" AI jobs`,
-            `site:glassdoor.com "${query}" AI positions`,
-            `site:jobs.lever.co "${query}" AI`,
-            `site:boards.greenhouse.io "${query}" AI`,
-            `"${query}" AI engineer jobs`,
-            `"${query}" data scientist positions`,
-            `"${query}" ML engineer openings`,
-            `"${query}" AI researcher jobs`,
-          ];
-
-          const jobs: JobListing[] = [];
-
-          for (const searchQuery of searchQueries) {
-            try {
-              const results = await webSearch.search({ query: searchQuery });
-
-              if (results.code === 200 && results.data.length > 0) {
-                // Convert search results to job listings
-                const jobsFromSearch = await Promise.all(
-                  results.data.map(async (result) => {
-                    const job = await parseSearchResultToJob(result, 'web_search', true);
-                    return job;
-                  })
-                );
-
-                jobs.push(...jobsFromSearch.filter(Boolean));
-              }
-            } catch (err) {
-              console.warn(`Search failed for query: ${searchQuery}`, err);
-            }
+          // Fetch jobs from Firebase
+          let firebaseJobs: FirebaseJob[] = [];
+          
+          if (query.trim()) {
+            // Search jobs by query
+            firebaseJobs = await jobService.searchJobs(query);
+          } else {
+            // Get all jobs if no query
+            firebaseJobs = await jobService.getAllJobs(100);
           }
 
-          // Remove duplicates and store in database
-          const uniqueJobs = deduplicateJobs(jobs);
-          await storeJobsInDatabase(uniqueJobs);
+          // Convert Firebase jobs to JobListing format
+          const jobs: JobListing[] = firebaseJobs.map(fbJob => ({
+            id: fbJob.id,
+            title: fbJob.title,
+            company: fbJob.company,
+            description: fbJob.description,
+            location: fbJob.location,
+            experience_level: fbJob.experience_level,
+            skills: fbJob.skills_required,
+            ai_specializations: [],
+            salary_range: fbJob.salary_min && fbJob.salary_max 
+              ? `$${fbJob.salary_min.toLocaleString()} - $${fbJob.salary_max.toLocaleString()}`
+              : undefined,
+            job_type: fbJob.job_type,
+            source: fbJob.source,
+            source_id: fbJob.id,
+            external_url: fbJob.source_url,
+            keywords: fbJob.skills_required,
+            posted_date: fbJob.posted_at?.toDate?.()?.toLocaleDateString() || 'Recently',
+            expires_date: fbJob.expires_at?.toDate?.()?.toLocaleDateString(),
+            status: fbJob.is_active ? 'active' : 'inactive',
+            normalized_score: 1.0,
+            quality_score: 1.0,
+            is_duplicate: false,
+            crawl_timestamp: new Date().toISOString(),
+          }));
 
-          set({ jobs: uniqueJobs, filteredJobs: uniqueJobs, loading: false });
+          set({ jobs, filteredJobs: jobs, loading: false });
 
         } catch (error: any) {
-          set({ error: error.message || 'Failed to search jobs', loading: false });
+          console.error('Error fetching jobs:', error);
+          set({ error: error.message || 'Failed to fetch jobs from database', loading: false });
         }
       },
 
-      // Aggregate jobs from multiple sources with rate limiting
+      // Fetch all jobs from Firebase (simplified aggregation)
       aggregateJobs: async (sources = get().crawlConfig.sources) => {
         const state = get();
         set({
           isAggregating: true,
           error: null,
-          aggregationProgress: state.jobSources
-            .filter(source => sources.includes(source.id))
-            .map(source => ({
-              source: source.name,
-              status: 'pending' as const,
-              jobs_found: 0,
-              message: 'Waiting to start...'
-            }))
+          aggregationProgress: [{
+            source: 'Firebase',
+            status: 'crawling' as const,
+            jobs_found: 0,
+            message: 'Fetching jobs from database...'
+          }]
         });
 
         try {
-          const allJobs: JobListing[] = [];
-          const { crawlConfig } = state;
+          // Fetch all active jobs from Firebase
+          const firebaseJobs = await jobService.getAllJobs(200);
 
-          // Reset global rate limiting at start
-          aiExtractionCount = 0;
-          lastAiCall = 0;
-
-          // Process each active source
-          for (const sourceId of sources) {
-            const source = state.jobSources.find(s => s.id === sourceId && s.is_active);
-            if (!source) continue;
-
-            // Update progress
-            set(state => ({
-              aggregationProgress: state.aggregationProgress.map(p =>
-                p.source === source.name
-                  ? { ...p, status: 'crawling', message: 'Starting data collection...' }
-                  : p
-              )
-            }));
-
-            try {
-              let sourceJobs: JobListing[] = [];
-
-              switch (sourceId) {
-                case 'twitter-x':
-                  sourceJobs = await get().aggregateFromTwitterX([
-                    '#AIJobs', '#MachineLearningJobs', '#DataScienceJobs',
-                    '#MLOps', '#NLP', '#ComputerVision', '#DeepLearning'
-                  ]);
-                  break;
-
-                case 'linkedin':
-                  sourceJobs = await get().aggregateFromLinkedIn([
-                    ...crawlConfig.keywords,
-                    'Copilot developer', 'CCAI specialist', 'Lex chatbot'
-                  ]);
-                  break;
-
-                case 'indeed':
-                  sourceJobs = await get().aggregateFromIndeed([
-                    ...crawlConfig.keywords,
-                    'AI Engineer', 'ML Engineer', 'Data Scientist'
-                  ]);
-                  break;
-
-                case 'naukri':
-                  sourceJobs = await get().aggregateFromNaukri([
-                    ...crawlConfig.keywords,
-                    'Artificial Intelligence', 'Machine Learning'
-                  ]);
-                  break;
-
-                case 'reddit':
-                  sourceJobs = await get().aggregateFromReddit([
-                    'MachineLearningJobs', 'DataScienceJobs', 'cscareerquestions'
-                  ]);
-                  break;
-
-                case 'google-careers':
-                case 'microsoft-careers':
-                case 'amazon-careers':
-                  sourceJobs = await get().aggregateFromCompanySites([
-                    sourceId.split('-')[0] // Extract company name
-                  ]);
-                  break;
-              }
-
-              // Process and normalize jobs
-              sourceJobs = sourceJobs.map(job => get().normalizeJobData(job, sourceId));
-
-              // Calculate quality scores
-              sourceJobs = sourceJobs.map(job => ({
-                ...job,
-                quality_score: get().calculateQualityScore(job)
-              }));
-
-              // Filter by quality (minimum score 0.6)
-              sourceJobs = sourceJobs.filter(job => job.quality_score >= 0.6);
-
-              allJobs.push(...sourceJobs);
-
-              // Update progress
-              set(state => ({
-                aggregationProgress: state.aggregationProgress.map(p =>
-                  p.source === source.name
-                    ? {
-                      ...p,
-                      status: 'completed',
-                      jobs_found: sourceJobs.length,
-                      message: `Found ${sourceJobs.length} quality jobs`
-                    }
-                    : p
-                ),
-                jobSources: state.jobSources.map(s =>
-                  s.id === sourceId
-                    ? {
-                      ...s,
-                      last_crawled: new Date().toISOString(),
-                      jobs_found: sourceJobs.length
-                    }
-                    : s
-                )
-              }));
-
-            } catch (err) {
-              console.error(`Aggregation failed for ${source.name}:`, err);
-
-              // Update progress with error
-              set(state => ({
-                aggregationProgress: state.aggregationProgress.map(p =>
-                  p.source === source.name
-                    ? {
-                      ...p,
-                      status: 'failed',
-                      jobs_found: 0,
-                      message: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
-                    }
-                    : p
-                )
-              }));
-            }
-
-            // Rate limiting delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-
-          // Detect duplicates
-          const duplicateIds = get().detectDuplicates(allJobs);
-
-          // Remove duplicates
-          const uniqueJobs = allJobs.filter(job => !duplicateIds.includes(job.id));
-
-          // Store jobs with embeddings
-          const jobsWithEmbeddings = await Promise.all(
-            uniqueJobs.map(job => get().embedJobDescription(job))
-          );
-
-          // Store in database
-          await storeJobsInDatabase(jobsWithEmbeddings);
-
-          // Update quality metrics
-          const duplicatesRemoved = allJobs.length - uniqueJobs.length;
-          const lowQualityFiltered = allJobs.filter(job => job.quality_score < 0.6).length;
+          // Convert Firebase jobs to JobListing format
+          const jobs: JobListing[] = firebaseJobs.map(fbJob => ({
+            id: fbJob.id,
+            title: fbJob.title,
+            company: fbJob.company,
+            description: fbJob.description,
+            location: fbJob.location,
+            experience_level: fbJob.experience_level,
+            skills: fbJob.skills_required,
+            ai_specializations: [],
+            salary_range: fbJob.salary_min && fbJob.salary_max 
+              ? `$${fbJob.salary_min.toLocaleString()} - $${fbJob.salary_max.toLocaleString()}`
+              : undefined,
+            job_type: fbJob.job_type,
+            source: fbJob.source,
+            source_id: fbJob.id,
+            external_url: fbJob.source_url,
+            keywords: fbJob.skills_required,
+            posted_date: fbJob.posted_at?.toDate?.()?.toLocaleDateString() || 'Recently',
+            expires_date: fbJob.expires_at?.toDate?.()?.toLocaleDateString(),
+            status: fbJob.is_active ? 'active' : 'inactive',
+            normalized_score: 1.0,
+            quality_score: 1.0,
+            is_duplicate: false,
+            crawl_timestamp: new Date().toISOString(),
+          }));
 
           set({
-            jobs: [...state.jobs, ...uniqueJobs],
-            filteredJobs: [...state.jobs, ...uniqueJobs],
+            jobs,
+            filteredJobs: jobs,
             isAggregating: false,
             lastAggregationDate: new Date().toISOString(),
-            duplicateJobs: [...state.duplicateJobs, ...duplicateIds],
+            aggregationProgress: [{
+              source: 'Firebase',
+              status: 'completed' as const,
+              jobs_found: jobs.length,
+              message: `Successfully loaded ${jobs.length} jobs`
+            }],
             qualityMetrics: {
-              total_jobs: state.qualityMetrics.total_jobs + allJobs.length,
-              unique_jobs: state.qualityMetrics.unique_jobs + uniqueJobs.length,
-              duplicates_removed: state.qualityMetrics.duplicates_removed + duplicatesRemoved,
-              low_quality_filtered: state.qualityMetrics.low_quality_filtered + lowQualityFiltered,
-              sources_active: state.jobSources.filter(s => s.is_active).length
+              total_jobs: jobs.length,
+              unique_jobs: jobs.length,
+              duplicates_removed: 0,
+              low_quality_filtered: 0,
+              sources_active: 1
             }
           });
 
         } catch (error: any) {
           console.error('Job aggregation failed:', error);
-
-          // Check if it's a rate limiting error
-          const isRateLimit = error.message?.includes('rate limit') ||
-            error.message?.includes('9001');
-
-          const errorMessage = isRateLimit
-            ? 'Rate limit reached. Using fallback job parsing. Some features may be limited.'
-            : error.message || 'Failed to aggregate jobs';
-
           set({
-            error: errorMessage,
+            error: error.message || 'Failed to fetch jobs from database',
             isAggregating: false,
-            aggregationProgress: state.aggregationProgress.map(p => ({
-              ...p,
+            aggregationProgress: [{
+              source: 'Firebase',
               status: 'failed' as const,
-              message: isRateLimit ? 'Rate limited - using fallback' : (error.message || 'Aggregation failed')
-            }))
+              jobs_found: 0,
+              message: error.message || 'Failed to load jobs'
+            }]
           });
-
-          // Show user-friendly notification
-          if (isRateLimit && typeof window !== 'undefined') {
-            // Reset the global AI extraction counter to use fallback parsing
-            aiExtractionCount = MAX_AI_EXTRACTIONS_PER_MINUTE;
-          }
         }
       },
 

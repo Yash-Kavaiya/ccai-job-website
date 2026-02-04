@@ -309,22 +309,52 @@ export const useRecruiterStore = create<RecruiterState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const now = new Date().toISOString();
+          const now = new Date();
           const jobId = `job_${Date.now()}`;
 
+          // Map frontend job data to backend-compatible format
           const job: JobPosting = {
             ...jobData,
             id: jobId,
             recruiterId: user.uid,
             views: 0,
             applicationsCount: 0,
-            createdAt: now,
-            updatedAt: now
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString()
+          };
+
+          // Create backend-compatible job document
+          const firestoreJob = {
+            id: jobId,
+            title: job.title,
+            company: job.company || 'Company Name', // Use company from recruiter profile
+            description: job.description,
+            location: job.location,
+            salary_min: job.salaryMin,
+            salary_max: job.salaryMax,
+            job_type: job.jobType?.replace('-', '_') || 'full_time', // Convert 'full-time' to 'full_time'
+            skills_required: job.requirements || [],
+            experience_level: job.experienceLevel || 'Mid-Level',
+            source: 'manual',
+            source_url: `${window.location.origin}/jobs/${jobId}`,
+            company_logo_url: job.companyLogo || '',
+            posted_at: now,
+            expires_at: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+            is_active: job.status === 'active',
+            embedding_id: null,
+            // Keep recruiter-specific fields
+            recruiterId: user.uid,
+            views: 0,
+            applicationsCount: 0,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+            remotePolicy: job.remotePolicy,
+            status: job.status
           };
 
           // Remove undefined values (Firestore doesn't accept undefined)
           const cleanJob = Object.fromEntries(
-            Object.entries(job).filter(([_, value]) => value !== undefined)
+            Object.entries(firestoreJob).filter(([_, value]) => value !== undefined)
           );
 
           await setDoc(doc(db, 'jobs', jobId), cleanJob);

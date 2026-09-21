@@ -81,26 +81,19 @@ export const useRecruiterStore = create<RecruiterState>()(
       setHiringNeeds: (needs) => set({ hiringNeeds: needs }),
 
       completeOnboarding: async () => {
-        const { companyProfile, hiringNeeds } = get();
         const user = useAuthStore.getState().user;
+        if (!user) throw new Error('Not authenticated');
 
-        if (!user) {
-          const error = 'You must be logged in to complete onboarding';
-          set({ error });
-          throw new Error(error);
-        }
-
+        const { companyProfile, hiringNeeds } = get();
         if (!companyProfile || !hiringNeeds) {
-          const error = 'Please complete all onboarding steps';
-          set({ error });
-          throw new Error(error);
+          throw new Error('Incomplete onboarding data');
         }
 
         set({ isLoading: true, error: null });
 
         try {
           const now = new Date().toISOString();
-          const recruiterProfile: RecruiterProfile = {
+          const profile: RecruiterProfile = {
             userId: user.uid,
             company: companyProfile as CompanyProfile,
             hiringNeeds: hiringNeeds as HiringNeeds,
@@ -109,19 +102,17 @@ export const useRecruiterStore = create<RecruiterState>()(
             updatedAt: now
           };
 
-          // Save recruiter profile to Firestore
-          await setDoc(doc(db, 'recruiter_profiles', user.uid), recruiterProfile);
+          await setDoc(doc(db, 'recruiter_profiles', user.uid), profile);
 
-          // Update user's onboarding status
+          // Update user document to mark onboarding complete
           await updateDoc(doc(db, 'users', user.uid), {
-            onboardingComplete: true
+            onboardingComplete: true,
+            companyProfile: profile.company,
+            updatedAt: now
           });
 
-          // Update auth store
-          useAuthStore.getState().setOnboardingComplete();
-
           set({
-            recruiterProfile,
+            recruiterProfile: profile,
             isOnboardingComplete: true,
             isLoading: false
           });
@@ -149,11 +140,10 @@ export const useRecruiterStore = create<RecruiterState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const docRef = doc(db, 'recruiter_profiles', user.uid);
-          const docSnap = await getDoc(docRef);
+          const profileDoc = await getDoc(doc(db, 'recruiter_profiles', user.uid));
 
-          if (docSnap.exists()) {
-            const profile = docSnap.data() as RecruiterProfile;
+          if (profileDoc.exists()) {
+            const profile = profileDoc.data() as RecruiterProfile;
             set({
               recruiterProfile: profile,
               companyProfile: profile.company,
@@ -180,17 +170,17 @@ export const useRecruiterStore = create<RecruiterState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const jobsRef = collection(db, 'jobs');
-          const q = query(
-            jobsRef,
+          const jobsQuery = query(
+            collection(db, 'jobs'),
             where('recruiterId', '==', user.uid),
             orderBy('createdAt', 'desc')
           );
-          const querySnapshot = await getDocs(q);
 
+          const querySnapshot = await getDocs(jobsQuery);
           const jobs: JobPosting[] = [];
+
           querySnapshot.forEach((doc) => {
-            jobs.push({ id: doc.id, ...(doc.data() as any) } as JobPosting);
+            jobs.push({ id: doc.id, ...doc.data() } as JobPosting);
           });
 
           set({ postedJobs: jobs, isLoading: false });
@@ -203,44 +193,43 @@ export const useRecruiterStore = create<RecruiterState>()(
         }
       },
 
-      loadApplications: async (jobId?: string) => {
+      loadApplications: async (jobId) => {
         const user = useAuthStore.getState().user;
         if (!user) return;
 
         set({ isLoading: true, error: null });
 
         try {
-          const applicationsRef = collection(db, 'job_applications');
-          let q;
+          let applicationsQuery;
 
           if (jobId) {
-            q = query(
-              applicationsRef,
+            applicationsQuery = query(
+              collection(db, 'applications'),
               where('jobId', '==', jobId),
               orderBy('appliedAt', 'desc')
             );
           } else {
-            // Get all applications for this recruiter's jobs
+            // Get all applications for recruiter's jobs
             const { postedJobs } = get();
-            const jobIds = postedJobs.map(job => job.id);
+            const jobIds = postedJobs.map(j => j.id);
 
             if (jobIds.length === 0) {
               set({ applications: [], isLoading: false });
               return;
             }
 
-            q = query(
-              applicationsRef,
-              where('jobId', 'in', jobIds.slice(0, 10)), // Firestore 'in' limit
+            applicationsQuery = query(
+              collection(db, 'applications'),
+              where('jobId', 'in', jobIds.slice(0, 10)), // Firestore 'in' limit is 10
               orderBy('appliedAt', 'desc')
             );
           }
 
-          const querySnapshot = await getDocs(q);
-
+          const querySnapshot = await getDocs(applicationsQuery);
           const applications: JobApplication[] = [];
+
           querySnapshot.forEach((doc) => {
-            applications.push({ id: doc.id, ...(doc.data() as any) } as JobApplication);
+            applications.push({ id: doc.id, ...doc.data() } as JobApplication);
           });
 
           set({ applications, isLoading: false });
@@ -256,17 +245,19 @@ export const useRecruiterStore = create<RecruiterState>()(
       loadAnalytics: async () => {
         const { postedJobs, applications } = get();
 
-        const activeJobs = postedJobs.filter(job => job.status === 'active').length;
-        const pendingApplications = applications.filter(app => app.status === 'pending').length;
-        const shortlistedCandidates = applications.filter(app => app.status === 'shortlisted').length;
-        const totalViews = postedJobs.reduce((sum, job) => sum + (job.views || 0), 0);
+        const activeJobs = postedJobs.filter(j => j.status === 'active');
+        const pendingApplications = applications.filter(a => a.status === 'pending');
+        const shortlistedCandidates = applications.filter(a =>
+          a.status === 'shortlisted' || a.status === 'interview'
+        );
+        const totalViews = postedJobs.reduce((sum, j) => sum + (j.views || 0), 0);
 
         const analytics: RecruiterAnalytics = {
           totalJobs: postedJobs.length,
-          activeJobs,
+          activeJobs: activeJobs.length,
           totalApplications: applications.length,
-          pendingApplications,
-          shortlistedCandidates,
+          pendingApplications: pendingApplications.length,
+          shortlistedCandidates: shortlistedCandidates.length,
           totalViews,
           avgApplicationsPerJob: postedJobs.length > 0
             ? Math.round(applications.length / postedJobs.length)
@@ -311,6 +302,11 @@ export const useRecruiterStore = create<RecruiterState>()(
         try {
           const now = new Date();
           const jobId = `job_${Date.now()}`;
+          const { companyProfile, recruiterProfile } = get();
+          const companyName =
+            companyProfile?.name ||
+            recruiterProfile?.company?.name ||
+            'Company Name';
 
           // Map frontend job data to backend-compatible format
           const job: JobPosting = {
@@ -327,17 +323,17 @@ export const useRecruiterStore = create<RecruiterState>()(
           const firestoreJob = {
             id: jobId,
             title: job.title,
-            company: job.company || 'Company Name', // Use company from recruiter profile
+            company: companyName,
             description: job.description,
             location: job.location,
             salary_min: job.salaryMin,
             salary_max: job.salaryMax,
             job_type: job.jobType?.replace('-', '_') || 'full_time', // Convert 'full-time' to 'full_time'
             skills_required: job.requirements || [],
-            experience_level: job.experienceLevel || 'Mid-Level',
+            experience_level: 'Mid-Level',
             source: 'manual',
             source_url: `${window.location.origin}/jobs/${jobId}`,
-            company_logo_url: job.companyLogo || '',
+            company_logo_url: '',
             posted_at: now,
             expires_at: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
             is_active: job.status === 'active',
@@ -379,16 +375,14 @@ export const useRecruiterStore = create<RecruiterState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const updateData = {
+          await updateDoc(doc(db, 'jobs', jobId), {
             ...updates,
             updatedAt: new Date().toISOString()
-          };
-
-          await updateDoc(doc(db, 'jobs', jobId), updateData);
+          });
 
           set((state) => ({
             postedJobs: state.postedJobs.map(job =>
-              job.id === jobId ? { ...job, ...updateData } : job
+              job.id === jobId ? { ...job, ...updates } : job
             ),
             isLoading: false
           }));
@@ -406,9 +400,9 @@ export const useRecruiterStore = create<RecruiterState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // Soft delete by updating status
           await updateDoc(doc(db, 'jobs', jobId), {
             status: 'closed',
+            is_active: false,
             updatedAt: new Date().toISOString()
           });
 
@@ -426,12 +420,11 @@ export const useRecruiterStore = create<RecruiterState>()(
         }
       },
 
-      // Application management actions
       updateApplicationStatus: async (applicationId, status) => {
         set({ isLoading: true, error: null });
 
         try {
-          await updateDoc(doc(db, 'job_applications', applicationId), {
+          await updateDoc(doc(db, 'applications', applicationId), {
             status,
             updatedAt: new Date().toISOString()
           });
@@ -455,11 +448,11 @@ export const useRecruiterStore = create<RecruiterState>()(
       clearError: () => set({ error: null })
     }),
     {
-      name: 'aijobhub-recruiter',
+      name: 'recruiter-storage',
       partialize: (state) => ({
+        onboardingStep: state.onboardingStep,
         companyProfile: state.companyProfile,
         hiringNeeds: state.hiringNeeds,
-        onboardingStep: state.onboardingStep,
         isOnboardingComplete: state.isOnboardingComplete
       })
     }

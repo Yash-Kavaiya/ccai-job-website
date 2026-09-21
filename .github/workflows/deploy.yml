@@ -1,96 +1,62 @@
-name: Deploy to Cloud Run
+name: Deploy to Vercel
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
-  PROJECT_ID: ccai-job-website
-  REGION: us-central1
-  SERVICE_NAME: ai-job-alchemist
-  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  WORKING_DIRECTORY: AI Job Alchemist
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      id-token: write  # Required for WIF
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIRECTORY }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Debug Secret Presence
-        env:
-          SA_KEY: ${{ secrets.GCP_SA_KEY }}
-          API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: AI Job Alchemist/package-lock.json
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
         run: |
-          if [ -n "$SA_KEY" ]; then
-            echo "GCP_SA_KEY is set (length: ${#SA_KEY})"
+          vercel pull --yes \
+            --environment=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'production' || 'preview' }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
           else
-            echo "::error::GCP_SA_KEY is empty or not set!"
-            exit 1
-          fi
-          
-          if [ -z "$API_KEY" ]; then
-             echo "::warning::VITE_FIREBASE_API_KEY is missing! The app may not work."
+            vercel build --token=${{ secrets.VERCEL_TOKEN }}
           fi
 
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ env.PROJECT_ID }}
-
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }} --quiet
-
-      - name: Build Docker image
-        run: |
-          docker build \
-            --build-arg VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }} \
-            --build-arg VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }} \
-            --build-arg VITE_FIREBASE_PROJECT_ID=ccai-job-website \
-            --build-arg VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }} \
-            --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }} \
-            --build-arg VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }} \
-            --build-arg VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }} \
-            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:latest \
-            "AI Job Alchemist"
-
-      - name: Push Docker image to Artifact Registry
-        run: |
-          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          docker push ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:latest
-
-      - name: Deploy to Cloud Run
+      - name: Deploy Project Artifacts to Vercel
         id: deploy
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.SERVICE_NAME }}
-          region: ${{ env.REGION }}
-          image: ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          flags: |
-            --allow-unauthenticated
-            --port=8080
-            --cpu=1
-            --memory=512Mi
-            --min-instances=0
-            --max-instances=10
-            --concurrency=80
-
-      - name: Output Cloud Run URL
         run: |
-          echo "Service deployed to: ${{ steps.deploy.outputs.url }}"
-          echo "::notice title=Deployment URL::${{ steps.deploy.outputs.url }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          else
+            url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to: $url"
+          echo "::notice title=Deployment URL::$url"

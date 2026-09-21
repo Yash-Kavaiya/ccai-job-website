@@ -8,7 +8,7 @@ AI Job Alchemist — a job platform with two user roles (candidates and recruite
 
 ## Repository Layout
 
-All application code lives in the `AI Job Alchemist/` subdirectory. The root contains CI/CD (`.github/workflows/`), Firebase config (`firebase.json`, `firestore.rules`, `storage.rules`), and deployment files (`Dockerfile`, `nginx.conf`, `netlify.toml`).
+All application code lives in the `AI Job Alchemist/` subdirectory. The root contains CI/CD (`.github/workflows/`). App-level Firebase and deploy config live under `AI Job Alchemist/` (`firebase.json`, `firestore.rules`, `storage.rules`, `vercel.json`, `netlify.toml`).
 
 ## Commands
 
@@ -81,6 +81,8 @@ VITE_FIREBASE_MEASUREMENT_ID
 
 ## Deployment
 
-- **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — builds Docker image, pushes to Google Artifact Registry, deploys to Cloud Run on push to `main`
-- **Cloud Run**: 1 CPU, 512MB RAM, 0-10 instances, port 8080
+- **Primary**: Vercel — `AI Job Alchemist/vercel.json` (Vite SPA, SPA rewrites to `index.html`)
+- **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml`) — on push/PR to `main`, runs `vercel pull` → `vercel build` → `vercel deploy --prebuilt` (production on `main`, preview on PRs)
+- **Secrets**: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (see `AI Job Alchemist/DEPLOYMENT.md`)
+- **Env vars**: set `VITE_FIREBASE_*` in the Vercel project (pulled into CI via `vercel pull`)
 - **Alternative**: Netlify (`netlify.toml`) or Firebase Hosting (`firebase.json`)

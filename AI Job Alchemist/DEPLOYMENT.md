@@ -1,191 +1,106 @@
-# Deployment Guide - Cloud Run with GitHub Actions & WIF
+# Deployment Guide — Vercel with GitHub Actions
 
-This guide explains how to deploy the AI Job Alchemist app to Google Cloud Run using GitHub Actions with Workload Identity Federation (WIF) for secure, keyless authentication.
+This guide explains how to deploy the AI Job Alchemist Vite SPA to Vercel using GitHub Actions.
 
 ## Prerequisites
 
-- Google Cloud Project with billing enabled
-- GitHub repository
-- `gcloud` CLI installed locally
+- A [Vercel](https://vercel.com) account
+- Access to this GitHub repository
+- Firebase project credentials (`VITE_FIREBASE_*`)
 
-## Step 1: Set Up Google Cloud Project
+## Step 1: Create a Vercel Project
+
+1. Install the Vercel CLI locally (optional but recommended):
 
 ```bash
-# Set your project ID
-export PROJECT_ID="your-project-id"
-export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
-export REGION="us-central1"
-export SERVICE_ACCOUNT_NAME="github-actions-sa"
-export POOL_NAME="github-pool"
-export PROVIDER_NAME="github-provider"
-export GITHUB_ORG="your-github-username-or-org"
-export GITHUB_REPO="your-repo-name"
-
-# Set the project
-gcloud config set project $PROJECT_ID
+npm install -g vercel
 ```
 
-## Step 2: Enable Required APIs
+2. From the app directory, link the project:
 
 ```bash
-gcloud services enable \
-  cloudresourcemanager.googleapis.com \
-  iamcredentials.googleapis.com \
-  sts.googleapis.com \
-  run.googleapis.com \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com
+cd "AI Job Alchemist"
+vercel link
 ```
 
-## Step 3: Create Artifact Registry Repository
+When prompted, create a new project (or link an existing one). Set the **Root Directory** to `AI Job Alchemist` if linking from the monorepo root in the Vercel dashboard.
+
+3. Note the values written to `.vercel/project.json`:
+
+- `orgId` → GitHub secret `VERCEL_ORG_ID`
+- `projectId` → GitHub secret `VERCEL_PROJECT_ID`
+
+## Step 2: Create a Vercel Token
+
+1. Open [Vercel Account Tokens](https://vercel.com/account/tokens)
+2. Create a token with access to the target team/project
+3. Save it as GitHub secret `VERCEL_TOKEN`
+
+## Step 3: Configure Environment Variables on Vercel
+
+In the Vercel project → **Settings → Environment Variables**, add these for Production, Preview, and Development:
+
+| Name | Example |
+|------|---------|
+| `VITE_FIREBASE_API_KEY` | your Firebase API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `your_project_id.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | your Firebase project ID |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `your_project_id.firebasestorage.app` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | your messaging sender ID |
+| `VITE_FIREBASE_APP_ID` | your Firebase app ID |
+| `VITE_FIREBASE_MEASUREMENT_ID` | your Analytics measurement ID (optional) |
+
+These are pulled into the CI build via `vercel pull` / `vercel build`.
+
+## Step 4: Add GitHub Secrets
+
+In the repository → **Settings → Secrets and variables → Actions**, add:
+
+| Secret | Source |
+|--------|--------|
+| `VERCEL_TOKEN` | Vercel account token |
+| `VERCEL_ORG_ID` | `.vercel/project.json` → `orgId` |
+| `VERCEL_PROJECT_ID` | `.vercel/project.json` → `projectId` |
+
+## Step 5: Deploy
+
+Push to `main` (or run the workflow manually):
 
 ```bash
-gcloud artifacts repositories create cloud-run \
-  --repository-format=docker \
-  --location=$REGION \
-  --description="Docker images for Cloud Run"
-```
-
-## Step 4: Create Service Account for GitHub Actions
-
-```bash
-# Create service account
-gcloud iam service-accounts create $SERVICE_ACCOUNT_NAME \
-  --display-name="GitHub Actions Service Account"
-
-# Get the service account email
-export SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-
-# Grant necessary permissions
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/run.admin"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/artifactregistry.writer"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/iam.serviceAccountUser"
-```
-
-## Step 5: Create Workload Identity Pool
-
-```bash
-# Create the pool
-gcloud iam workload-identity-pools create $POOL_NAME \
-  --location="global" \
-  --display-name="GitHub Actions Pool"
-
-# Get the pool ID
-export POOL_ID=$(gcloud iam workload-identity-pools describe $POOL_NAME \
-  --location="global" \
-  --format="value(name)")
-```
-
-## Step 6: Create Workload Identity Provider
-
-```bash
-gcloud iam workload-identity-pools providers create-oidc $PROVIDER_NAME \
-  --location="global" \
-  --workload-identity-pool=$POOL_NAME \
-  --display-name="GitHub Provider" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-condition="assertion.repository_owner=='${GITHUB_ORG}'"
-```
-
-## Step 7: Allow GitHub to Impersonate Service Account
-
-```bash
-gcloud iam service-accounts add-iam-policy-binding $SERVICE_ACCOUNT_EMAIL \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${GITHUB_ORG}/${GITHUB_REPO}"
-```
-
-## Step 8: Get WIF Provider Full Name
-
-```bash
-# Get the full provider name for GitHub secrets
-export WIF_PROVIDER=$(gcloud iam workload-identity-pools providers describe $PROVIDER_NAME \
-  --location="global" \
-  --workload-identity-pool=$POOL_NAME \
-  --format="value(name)")
-
-echo "WIF_PROVIDER: $WIF_PROVIDER"
-echo "WIF_SERVICE_ACCOUNT: $SERVICE_ACCOUNT_EMAIL"
-```
-
-## Step 9: Configure GitHub Secrets
-
-Add these secrets to your GitHub repository (Settings → Secrets and variables → Actions):
-
-| Secret Name | Value |
-|-------------|-------|
-| `GCP_PROJECT_ID` | Your GCP Project ID |
-| `WIF_PROVIDER` | Output from Step 8 (format: `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_NAME/providers/PROVIDER_NAME`) |
-| `WIF_SERVICE_ACCOUNT` | Service account email (format: `SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com`) |
-| `VITE_FIREBASE_API_KEY` | Your Firebase API Key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Your Firebase Auth Domain |
-| `VITE_FIREBASE_PROJECT_ID` | Your Firebase Project ID |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Your Firebase Storage Bucket |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Your Firebase Messaging Sender ID |
-| `VITE_FIREBASE_APP_ID` | Your Firebase App ID |
-| `VITE_FIREBASE_MEASUREMENT_ID` | Your Firebase Measurement ID |
-
-## Step 10: Deploy
-
-Push to the `main` branch or manually trigger the workflow:
-
-```bash
-git add .
-git commit -m "Add Cloud Run deployment"
 git push origin main
 ```
 
-## Verify Deployment
+The workflow in `.github/workflows/deploy.yml` will:
 
-Check the GitHub Actions tab in your repository to see the deployment progress. Once complete, you'll see the Cloud Run URL in the workflow output.
+1. Pull Vercel project + env config
+2. Build with `vercel build`
+3. Deploy prebuilt artifacts (`--prod` on `main`, preview on PRs)
+
+Check the GitHub Actions tab for the deployment URL.
+
+## SPA Routing
+
+`vercel.json` rewrites all routes to `/index.html` so React Router deep links work on refresh.
+
+## Local Preview
+
+```bash
+cd "AI Job Alchemist"
+npm install --legacy-peer-deps
+npm run build
+npx vercel --prod   # or: npx vercel   for a preview deploy
+```
 
 ## Troubleshooting
 
-### Permission Denied Errors
+### Missing env vars at build time
 
-If you see permission errors, ensure:
-1. The service account has the correct IAM roles
-2. The WIF provider attribute condition matches your GitHub org/username
-3. The repository name matches exactly in the principal set
+Ensure all `VITE_FIREBASE_*` variables are set in the Vercel project for the environment being deployed (Production vs Preview). Re-run the workflow after updating them.
 
-### Image Push Failures
+### Wrong root directory
 
-Ensure the Artifact Registry repository exists and the service account has `artifactregistry.writer` role.
+The app lives in `AI Job Alchemist/`. In the Vercel dashboard, set **Root Directory** to `AI Job Alchemist`, or always run the CLI from that folder.
 
-### Cloud Run Deployment Failures
+### Auth / CORS after deploy
 
-Check that:
-1. The service account has `run.admin` and `iam.serviceAccountUser` roles
-2. The region is correct
-3. The image was successfully pushed to Artifact Registry
-
-## Clean Up
-
-To delete all resources:
-
-```bash
-# Delete Cloud Run service
-gcloud run services delete ai-job-alchemist --region=$REGION
-
-# Delete Artifact Registry repository
-gcloud artifacts repositories delete cloud-run --location=$REGION
-
-# Delete WIF provider and pool
-gcloud iam workload-identity-pools providers delete $PROVIDER_NAME \
-  --location="global" \
-  --workload-identity-pool=$POOL_NAME
-
-gcloud iam workload-identity-pools delete $POOL_NAME --location="global"
-
-# Delete service account
-gcloud iam service-accounts delete $SERVICE_ACCOUNT_EMAIL
-```
+Add your Vercel domain (e.g. `*.vercel.app` and any custom domain) to Firebase Authentication → Authorized domains.

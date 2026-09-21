@@ -33,3 +33,7 @@ bun run build
 - Built with modern React patterns and TypeScript
 - Responsive design with Tailwind CSS
 - Pre-configured shadcn/ui components
+
+## Deployment
+
+Production deploys to **Vercel** via GitHub Actions. See [DEPLOYMENT.md](./DEPLOYMENT.md) for setup (Vercel project link, GitHub secrets, and Firebase env vars).

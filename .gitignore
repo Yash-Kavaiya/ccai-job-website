@@ -155,7 +155,7 @@ venv.bak/
 /site
 
 # mypy
-.mypy_cache/
+.mymy_cache/
 .dmypy.json
 dmypy.json
 
@@ -206,6 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 node_modules
+
+# Vercel
+.vercel
 
 # Firebase/Google Cloud service account files - NEVER commit these
 **/firebase-service-account*.json

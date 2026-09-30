@@ -70,13 +70,26 @@ Push to `main` (or run the workflow manually):
 git push origin main
 ```
 
-The workflow in `.github/workflows/deploy.yml` will:
+Two workflows run on pushes and pull requests to `main`:
+
+| Workflow | File | Needs Vercel secrets? |
+|----------|------|------------------------|
+| Typecheck and build | `.github/workflows/ci.yml` | No. Runs `npm ci` and `npm run build` (`tsc -b && vite build`) in `AI Job Alchemist/`. |
+| Deploy to Vercel | `.github/workflows/deploy.yml` | Yes. Fails immediately if `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID` is unset, before calling the Vercel CLI. |
+
+When the three secrets are set, Deploy to Vercel will:
 
 1. Pull Vercel project + env config
 2. Build with `vercel build`
-3. Deploy prebuilt artifacts (`--prod` on `main`, preview on PRs)
+3. Deploy prebuilt artifacts (`--prod` on `main`, preview on same-repo PRs)
+
+Pull requests opened from forks do not receive these secrets, so the deploy job is skipped for them. Typecheck still runs.
 
 Check the GitHub Actions tab for the deployment URL.
+
+### Node version
+
+`.nvmrc` is `18`. GitHub Actions installs **Node 20** for both workflows (Node 18 is end of life). `actions/checkout` and `actions/setup-node` are on major v7, which run on the Actions Node 24 runtime. That runtime is only for the actions themselves; the app build uses Node 20.
 
 ## SPA Routing
 
@@ -92,6 +105,10 @@ npx vercel --prod   # or: npx vercel   for a preview deploy
 ```
 
 ## Troubleshooting
+
+### Deploy fails with "Missing Vercel GitHub Actions secrets"
+
+The deploy log names each unset secret (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`). Add them in the repository settings. An empty `--token` is not passed to the CLI. Typecheck and build can still be green in the other workflow.
 
 ### Missing env vars at build time
 

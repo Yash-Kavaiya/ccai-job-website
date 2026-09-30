@@ -9,54 +9,98 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# Vercel CLI reads these from the environment. Values come from Actions secrets.
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  WORKING_DIRECTORY: AI Job Alchemist
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Fork pull requests cannot read repository secrets. Typecheck still runs
+    # in "Typecheck and build" (.github/workflows/ci.yml).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     defaults:
       run:
-        working-directory: ${{ env.WORKING_DIRECTORY }}
+        working-directory: "AI Job Alchemist"
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
+          # Repo .nvmrc is 18 (EOL). Keep Node 20 for the Vercel CLI and for
+          # `vercel build`, matching the runtime used before this workflow
+          # failed on a missing token. Action runtime is Node 24 (checkout v7
+          # and setup-node v7); that is not the version used to build the app.
           node-version: 20
           cache: npm
-          cache-dependency-path: AI Job Alchemist/package-lock.json
+          cache-dependency-path: "AI Job Alchemist/package-lock.json"
+
+      - name: Confirm app directory
+        run: |
+          test -f package.json
+          test -f vercel.json
+          echo "Deploying from $(pwd)"
+
+      - name: Check Vercel credentials
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          missing=()
+          [ -z "${VERCEL_TOKEN}" ] && missing+=("VERCEL_TOKEN")
+          [ -z "${VERCEL_ORG_ID}" ] && missing+=("VERCEL_ORG_ID")
+          [ -z "${VERCEL_PROJECT_ID}" ] && missing+=("VERCEL_PROJECT_ID")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Missing Vercel GitHub Actions secrets::Set these repository secrets before Deploy to Vercel can succeed: ${missing[*]}. See AI Job Alchemist/DEPLOYMENT.md. Typecheck does not need them and runs in the Typecheck and build workflow."
+            echo "Missing GitHub Actions secrets: ${missing[*]}"
+            echo "Add them under Settings → Secrets and variables → Actions:"
+            echo "  VERCEL_TOKEN       from https://vercel.com/account/tokens"
+            echo "  VERCEL_ORG_ID      from .vercel/project.json (orgId)"
+            echo "  VERCEL_PROJECT_ID  from .vercel/project.json (projectId)"
+            echo "Do not commit these values. Pull requests from forks never receive them."
+            exit 1
+          fi
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Pull Vercel Environment Information
+      - name: Pull Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel pull --yes \
-            --environment=${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'production' || 'preview' }} \
-            --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
-            vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            environment=production
           else
-            vercel build --token=${{ secrets.VERCEL_TOKEN }}
+            environment=preview
+          fi
+          vercel pull --yes --environment="${environment}" --token="${VERCEL_TOKEN}"
+
+      - name: Build project artifacts
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            vercel build --prod --token="${VERCEL_TOKEN}"
+          else
+            vercel build --token="${VERCEL_TOKEN}"
           fi
 
-      - name: Deploy Project Artifacts to Vercel
+      - name: Deploy project artifacts to Vercel
         id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
-            url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            url=$(vercel deploy --prebuilt --prod --token="${VERCEL_TOKEN}")
           else
-            url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+            url=$(vercel deploy --prebuilt --token="${VERCEL_TOKEN}")
           fi
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Deployed to: $url"
-          echo "::notice title=Deployment URL::$url"
+          echo "url=${url}" >> "${GITHUB_OUTPUT}"
+          echo "Deployed to: ${url}"
+          echo "::notice title=Deployment URL::${url}"

@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useRecruiterStore } from '@/store/recruiter-store';
+import type { JobPosting } from '@/types/recruiter';
 
 const jobSchema = z.object({
   title: z.string().min(3, 'Job title must be at least 3 characters'),
@@ -41,6 +42,11 @@ const jobSchema = z.object({
 });
 
 type JobFormValues = z.infer<typeof jobSchema>;
+
+type NewJobPosting = Omit<
+  JobPosting,
+  'id' | 'recruiterId' | 'views' | 'applicationsCount' | 'createdAt' | 'updatedAt'
+>;
 
 export function PostJobPage() {
   const navigate = useNavigate();
@@ -65,10 +71,21 @@ export function PostJobPage() {
     console.log('Submitting job data:', data);
     setIsSubmitting(true);
     try {
-      const jobId = await createJob({
-        ...data,
-        requirements: data.requirements.split('\n').filter(r => r.trim()),
-      } as any);
+      const job: NewJobPosting = {
+        title: data.title,
+        description: data.description,
+        requirements: data.requirements
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean),
+        location: data.location,
+        salaryMin: data.salaryMin,
+        salaryMax: data.salaryMax,
+        jobType: data.jobType,
+        remotePolicy: data.remotePolicy,
+        status: data.status,
+      };
+      const jobId = await createJob(job);
 
       console.log('Job created with ID:', jobId);
       toast({

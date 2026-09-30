@@ -1,0 +1,49 @@
+name: Typecheck and build
+
+# Verifies `tsc -b && vite build` without Vercel credentials.
+# Deploy to Vercel stays in deploy.yml and still needs VERCEL_* secrets.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "AI Job Alchemist"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          # Repo .nvmrc is 18 (EOL). The app build is verified on Node 20,
+          # which is also the runtime the previous deploy workflow installed.
+          # This is separate from the Node 24 runtime used by these actions.
+          node-version: 20
+          cache: npm
+          cache-dependency-path: "AI Job Alchemist/package-lock.json"
+
+      - name: Confirm app directory
+        run: |
+          test -f package.json
+          test -f package-lock.json
+          echo "Typechecking $(pwd)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and production build
+        run: npm run build

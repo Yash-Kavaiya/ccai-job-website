@@ -54,6 +54,7 @@ interface RecruiterState {
   updateApplicationStatus: (applicationId: string, status: JobApplication['status']) => Promise<void>;
 
   // Utility actions
+  updateCompanyProfile: (updates: Partial<CompanyProfile>) => Promise<void>;
   clearError: () => void;
 }
 
@@ -452,6 +453,48 @@ export const useRecruiterStore = create<RecruiterState>()(
           set({
             isLoading: false,
             error: error.message || 'Failed to update application'
+          });
+          throw error;
+        }
+      },
+
+      updateCompanyProfile: async (updates) => {
+        const user = useAuthStore.getState().user;
+        if (!user) throw new Error('You must be logged in');
+
+        set({ isLoading: true, error: null });
+        try {
+          const { companyProfile, hiringNeeds, recruiterProfile } = get();
+          const nextCompany = {
+            ...(companyProfile || {}),
+            ...updates,
+          } as CompanyProfile;
+
+          const now = new Date().toISOString();
+          const nextProfile: RecruiterProfile = {
+            userId: user.uid,
+            company: nextCompany,
+            hiringNeeds: (hiringNeeds || recruiterProfile?.hiringNeeds || {
+              rolesHiring: [],
+              teamSize: 1,
+              urgency: 'exploratory',
+            }) as HiringNeeds,
+            onboardingComplete: recruiterProfile?.onboardingComplete ?? true,
+            createdAt: recruiterProfile?.createdAt || now,
+            updatedAt: now,
+          };
+
+          await setDoc(doc(db, 'recruiter_profiles', user.uid), nextProfile, { merge: true });
+
+          set({
+            companyProfile: nextCompany,
+            recruiterProfile: nextProfile,
+            isLoading: false,
+          });
+        } catch (error: any) {
+          set({
+            isLoading: false,
+            error: error.message || 'Failed to update company profile',
           });
           throw error;
         }

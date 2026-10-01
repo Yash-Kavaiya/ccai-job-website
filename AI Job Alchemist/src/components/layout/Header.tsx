@@ -150,7 +150,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2" onClick={() => navigate('/settings')}>
+              <DropdownMenuItem
+                className="gap-2"
+                onClick={() =>
+                  navigate(user?.role === 'recruiter' ? '/recruiter/settings' : '/settings')
+                }
+              >
                 <Settings className="w-4 h-4" />
                 Settings
               </DropdownMenuItem>

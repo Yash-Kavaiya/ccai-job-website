@@ -42,7 +42,7 @@ const navigationItems = [
   {
     title: 'Premium',
     items: [
-      { icon: Bot, label: 'AI Agents', href: '/ai-agents', badge: 'Pro', match: ['/ai-agents'] },
+      { icon: Bot, label: 'AI Agents', href: '/ai-agents', badge: 'Soon', match: ['/ai-agents'] },
     ],
   },
   {

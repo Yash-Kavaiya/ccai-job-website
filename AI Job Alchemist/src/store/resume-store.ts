@@ -12,7 +12,6 @@ export interface ResumeAnalysis {
   strengths: string[];
   weaknesses: string[];
   analyzed_at: string;
-  // Optional fields for frontend compat
   detailedScoring?: Record<string, number>;
   aiSpecificKeywords?: string[];
   industryRelevance?: number;
@@ -29,6 +28,7 @@ export interface ResumeFile {
   user_id: string;
   name: string;
   file_url: string;
+  content_text?: string;
   skills: string[];
   experience_years: number;
   education: any[];
@@ -37,6 +37,7 @@ export interface ResumeFile {
   created_at: string;
   updated_at: string;
   isAnalyzing?: boolean;
+  storage_skipped?: boolean;
 }
 
 interface ResumeStore {
@@ -45,9 +46,10 @@ interface ResumeStore {
   isUploading: boolean;
   uploadError?: string;
 
-  // Actions
   uploadResume: (file: File) => Promise<void>;
+  saveResumeFromText: (text: string, name?: string) => Promise<void>;
   analyzeResume: (resumeId: string, resumeText?: string) => Promise<void>;
+  getMatchText: (resumeId?: string) => string;
   setCurrentResume: (resumeId: string) => void;
   removeResume: (resumeId: string) => Promise<void>;
   fetchResumes: () => Promise<void>;
@@ -62,7 +64,7 @@ function mapStorageError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error || 'Upload failed');
 
   if (code === 'storage/quota-exceeded' || message.includes('quota-exceeded') || message.includes('Quota for bucket')) {
-    return 'Firebase Storage quota for this project has been exceeded. Uploads will work again after the project Storage quota is raised (Blaze plan). Your file was not saved.';
+    return 'Firebase Storage quota for this project has been exceeded. Paste your resume text below to save analysis without file upload, or raise the Storage quota (Blaze plan).';
   }
   if (code === 'storage/unauthorized' || message.includes('storage/unauthorized')) {
     return 'You do not have permission to upload to Storage. Please sign in again and retry.';
@@ -79,45 +81,75 @@ function mapStorageError(error: unknown): string {
   return message || 'Upload failed';
 }
 
-// Simple ATS analysis based on common keywords
-const performBasicAnalysis = (fileName: string): ResumeAnalysis => {
-  // This is a basic analysis - in production, you'd use AI/ML service
-  const commonKeywords = ['python', 'javascript', 'react', 'node', 'aws', 'docker', 'kubernetes', 'sql', 'git', 'agile'];
-  const aiKeywords = ['machine learning', 'ai', 'tensorflow', 'pytorch', 'nlp', 'deep learning', 'data science'];
+const COMMON_KEYWORDS = [
+  'python', 'javascript', 'typescript', 'react', 'node', 'aws', 'docker',
+  'kubernetes', 'sql', 'git', 'agile', 'java', 'go', 'rust', 'postgres',
+];
+const AI_KEYWORDS = [
+  'machine learning', 'ai', 'tensorflow', 'pytorch', 'nlp', 'deep learning',
+  'data science', 'llm', 'langchain', 'transformers', 'computer vision', 'mlops',
+];
 
-  // Simulate analysis based on file name patterns
-  const lowerName = fileName.toLowerCase();
-  const matchedKeywords = commonKeywords.filter(k => lowerName.includes(k.substring(0, 3)));
-  const matchedAiKeywords = aiKeywords.filter(k => lowerName.includes(k.substring(0, 2)));
+export function performContentAnalysis(content: string): ResumeAnalysis {
+  const lower = content.toLowerCase();
+  const matchedKeywords = COMMON_KEYWORDS.filter((k) => lower.includes(k));
+  const matchedAiKeywords = AI_KEYWORDS.filter((k) => lower.includes(k));
 
-  const baseScore = 65;
-  const keywordBonus = matchedKeywords.length * 5;
-  const aiBonus = matchedAiKeywords.length * 3;
-  const atsScore = Math.min(95, baseScore + keywordBonus + aiBonus);
+  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+  const hasEmail = /[^\s@]+@[^\s@]+\.[^\s@]+/.test(content);
+  const hasPhone = /\+?\d[\d\s().-]{7,}\d/.test(content);
+  const hasExperience = /experience|worked|engineer|developer|intern/i.test(content);
+  const hasEducation = /university|college|bachelor|master|phd|b\.?s\.?|m\.?s\.?/i.test(content);
+
+  let formatScore = 55;
+  if (wordCount > 150) formatScore += 10;
+  if (hasEmail) formatScore += 10;
+  if (hasPhone) formatScore += 5;
+  if (hasExperience) formatScore += 10;
+  if (hasEducation) formatScore += 10;
+  formatScore = Math.min(95, formatScore);
+
+  const keywordBonus = matchedKeywords.length * 4;
+  const aiBonus = matchedAiKeywords.length * 5;
+  const atsScore = Math.min(95, 50 + keywordBonus + aiBonus + (hasExperience ? 5 : 0));
+
+  const strengths: string[] = [];
+  if (matchedKeywords.length) strengths.push(`Technical keywords found: ${matchedKeywords.slice(0, 5).join(', ')}`);
+  if (matchedAiKeywords.length) strengths.push(`AI/ML signals: ${matchedAiKeywords.slice(0, 4).join(', ')}`);
+  if (hasExperience) strengths.push('Experience section detected');
+  if (!strengths.length) strengths.push('Resume content saved for matching');
+
+  const weaknesses: string[] = [];
+  if (!matchedAiKeywords.length) weaknesses.push('Add AI/ML keywords relevant to target roles');
+  if (!hasEducation) weaknesses.push('Consider adding an education section');
+  if (wordCount < 120) weaknesses.push('Resume looks short — expand with quantified achievements');
 
   return {
     ats_score: atsScore,
     keyword_matches: [...matchedKeywords, ...matchedAiKeywords],
-    missing_keywords: commonKeywords.filter(k => !matchedKeywords.includes(k)).slice(0, 5),
+    missing_keywords: COMMON_KEYWORDS.filter((k) => !matchedKeywords.includes(k)).slice(0, 5),
     suggestions: [
-      'Add more specific technical skills',
+      'Mirror keywords from target job descriptions',
       'Include quantifiable achievements',
-      'Use action verbs to describe experience',
-      'Ensure consistent formatting throughout'
+      'Use clear section headers (Experience, Skills, Education)',
+      'Keep formatting consistent for ATS parsers',
     ],
-    strengths: [
-      'Resume uploaded successfully',
-      'File format is compatible with ATS systems'
-    ],
-    weaknesses: [
-      'Consider adding more industry-specific keywords',
-      'Add a professional summary section'
-    ],
+    strengths,
+    weaknesses,
     analyzed_at: new Date().toISOString(),
-    formatScore: 75,
-    readabilityScore: 80,
+    formatScore,
+    readabilityScore: Math.min(95, 60 + Math.min(30, Math.floor(wordCount / 40))),
+    aiSpecificKeywords: matchedAiKeywords,
   };
-};
+}
+
+async function persistResume(resume: ResumeFile) {
+  const resumeData = Object.fromEntries(
+    Object.entries(resume).filter(([, value]) => value !== undefined)
+  );
+  delete resumeData.isAnalyzing;
+  await setDoc(doc(db, 'resumes', resume.id), resumeData);
+}
 
 export const useResumeStore = create<ResumeStore>()(
   persist(
@@ -132,23 +164,40 @@ export const useResumeStore = create<ResumeStore>()(
           const user = auth.currentUser;
           if (!user) throw new Error('User not authenticated');
 
-          // Generate unique ID for the resume
           const resumeId = `${user.uid}_${Date.now()}`;
+          let contentText = '';
+          if (file.type === 'text/plain' || file.name.toLowerCase().endsWith('.txt')) {
+            contentText = await file.text();
+          }
 
-          // Upload file to Firebase Storage
-          const storageRef = ref(storage, `resumes/${user.uid}/${resumeId}_${file.name}`);
-          const snapshot = await uploadBytes(storageRef, file);
-          const downloadURL = await getDownloadURL(snapshot.ref);
+          let downloadURL = '';
+          let storageSkipped = false;
 
-          // Perform basic analysis
-          const analysis = performBasicAnalysis(file.name);
+          try {
+            const storageRef = ref(storage, `resumes/${user.uid}/${resumeId}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            downloadURL = await getDownloadURL(snapshot.ref);
+          } catch (storageError) {
+            const friendly = mapStorageError(storageError);
+            if (contentText.trim().length >= 40) {
+              // TXT (or readable text) can still be saved without Storage
+              storageSkipped = true;
+              downloadURL = '';
+              set({ uploadError: friendly });
+            } else {
+              throw new Error(friendly);
+            }
+          }
 
-          // Create resume document
+          const analysisSource = contentText.trim() || file.name;
+          const analysis = performContentAnalysis(analysisSource);
+
           const newResume: ResumeFile = {
             id: resumeId,
             user_id: user.uid,
             name: file.name,
             file_url: downloadURL,
+            content_text: contentText || undefined,
             skills: analysis.keyword_matches,
             experience_years: 0,
             education: [],
@@ -156,24 +205,19 @@ export const useResumeStore = create<ResumeStore>()(
             is_primary: get().resumes.length === 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            storage_skipped: storageSkipped || undefined,
           };
 
-          // Save to Firestore - filter out undefined values
-          const resumeData = Object.fromEntries(
-            Object.entries(newResume).filter(([_, value]) => value !== undefined)
-          );
-          delete resumeData.isAnalyzing; // Don't store this field
-          await setDoc(doc(db, 'resumes', resumeId), resumeData);
+          await persistResume(newResume);
 
-          set(state => ({
+          set((state) => ({
             resumes: [...state.resumes, newResume],
             currentResume: newResume,
             isUploading: false,
           }));
-
         } catch (error) {
           console.error('Upload error:', error);
-          const friendly = mapStorageError(error);
+          const friendly = error instanceof Error ? error.message : mapStorageError(error);
           set({
             isUploading: false,
             uploadError: friendly,
@@ -182,59 +226,118 @@ export const useResumeStore = create<ResumeStore>()(
         }
       },
 
-      analyzeResume: async (resumeId: string) => {
+      saveResumeFromText: async (text: string, name = 'pasted-resume.txt') => {
+        set({ isUploading: true, uploadError: undefined });
+        try {
+          const user = auth.currentUser;
+          if (!user) throw new Error('User not authenticated');
+
+          const trimmed = text.trim();
+          if (trimmed.length < 40) {
+            throw new Error('Please paste at least a short resume (40+ characters).');
+          }
+
+          const resumeId = `${user.uid}_${Date.now()}`;
+          const analysis = performContentAnalysis(trimmed);
+          const newResume: ResumeFile = {
+            id: resumeId,
+            user_id: user.uid,
+            name,
+            file_url: '',
+            content_text: trimmed,
+            skills: analysis.keyword_matches,
+            experience_years: 0,
+            education: [],
+            analysis,
+            is_primary: get().resumes.length === 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            storage_skipped: true,
+          };
+
+          await persistResume(newResume);
+
+          set((state) => ({
+            resumes: [...state.resumes, newResume],
+            currentResume: newResume,
+            isUploading: false,
+            uploadError: undefined,
+          }));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to save resume text';
+          set({ isUploading: false, uploadError: message });
+          throw new Error(message);
+        }
+      },
+
+      analyzeResume: async (resumeId: string, resumeText?: string) => {
         const { resumes } = get();
-        const resume = resumes.find(r => r.id === resumeId);
+        const resume = resumes.find((r) => r.id === resumeId);
         if (!resume) return;
 
-        set(state => ({
-          resumes: state.resumes.map(r =>
+        set((state) => ({
+          resumes: state.resumes.map((r) =>
             r.id === resumeId ? { ...r, isAnalyzing: true } : r
-          )
+          ),
         }));
 
         try {
-          // Perform analysis
-          const analysis = performBasicAnalysis(resume.name);
+          const source = resumeText || resume.content_text || resume.name;
+          const analysis = performContentAnalysis(source);
 
-          // Update in Firestore - filter out undefined values
-          const updateData = {
+          const updateData: ResumeFile = {
             ...resume,
             analysis,
+            skills: analysis.keyword_matches,
+            content_text: resumeText || resume.content_text,
             updated_at: new Date().toISOString(),
           };
-          delete (updateData as any).isAnalyzing;
-          const cleanData = Object.fromEntries(
-            Object.entries(updateData).filter(([_, value]) => value !== undefined)
-          );
-          await setDoc(doc(db, 'resumes', resumeId), cleanData, { merge: true });
+          delete (updateData as { isAnalyzing?: boolean }).isAnalyzing;
+          await persistResume(updateData);
 
-          set(state => ({
-            resumes: state.resumes.map(r =>
-              r.id === resumeId ? {
-                ...r,
-                analysis,
-                isAnalyzing: false
-              } : r
+          set((state) => ({
+            resumes: state.resumes.map((r) =>
+              r.id === resumeId
+                ? { ...r, analysis, skills: analysis.keyword_matches, content_text: updateData.content_text, isAnalyzing: false }
+                : r
             ),
-            currentResume: state.currentResume?.id === resumeId
-              ? { ...state.currentResume, analysis, isAnalyzing: false }
-              : state.currentResume
+            currentResume:
+              state.currentResume?.id === resumeId
+                ? {
+                    ...state.currentResume,
+                    analysis,
+                    skills: analysis.keyword_matches,
+                    content_text: updateData.content_text,
+                    isAnalyzing: false,
+                  }
+                : state.currentResume,
           }));
-
         } catch (error) {
           console.error('Analysis failed:', error);
-          set(state => ({
-            resumes: state.resumes.map(r =>
+          set((state) => ({
+            resumes: state.resumes.map((r) =>
               r.id === resumeId ? { ...r, isAnalyzing: false } : r
-            )
+            ),
           }));
         }
       },
 
+      getMatchText: (resumeId?: string) => {
+        const { resumes, currentResume } = get();
+        const resume = resumeId
+          ? resumes.find((r) => r.id === resumeId)
+          : currentResume || resumes[0];
+        if (!resume) return '';
+        if (resume.content_text?.trim()) return resume.content_text;
+        if (resume.skills?.length) {
+          return `${resume.name}\nSkills: ${resume.skills.join(', ')}`;
+        }
+        return resume.name;
+      },
+
       setCurrentResume: (resumeId: string) => {
         const { resumes } = get();
-        const resume = resumes.find(r => r.id === resumeId);
+        const resume = resumes.find((r) => r.id === resumeId);
         set({ currentResume: resume });
       },
 
@@ -251,14 +354,14 @@ export const useResumeStore = create<ResumeStore>()(
           );
 
           const snapshot = await getDocs(q);
-          const resumes = snapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
+          const resumes = snapshot.docs.map((docSnap) => ({
+            ...docSnap.data(),
+            id: docSnap.id,
           })) as ResumeFile[];
 
           set({
             resumes,
-            currentResume: resumes.find(r => r.is_primary) || resumes[0],
+            currentResume: resumes.find((r) => r.is_primary) || resumes[0],
           });
         } catch (error) {
           console.error('Error fetching resumes:', error);
@@ -271,24 +374,24 @@ export const useResumeStore = create<ResumeStore>()(
           if (!user) throw new Error('User not authenticated');
 
           const { resumes } = get();
-          const resume = resumes.find(r => r.id === resumeId);
+          const resume = resumes.find((r) => r.id === resumeId);
 
           if (resume) {
-            // Delete from Storage
-            try {
-              const storageRef = ref(storage, `resumes/${user.uid}/${resumeId}_${resume.name}`);
-              await deleteObject(storageRef);
-            } catch (storageError) {
-              console.warn('Could not delete file from storage:', storageError);
+            if (resume.file_url) {
+              try {
+                const storageRef = ref(storage, `resumes/${user.uid}/${resumeId}_${resume.name}`);
+                await deleteObject(storageRef);
+              } catch (storageError) {
+                console.warn('Could not delete file from storage:', storageError);
+              }
             }
-
-            // Delete from Firestore
             await deleteDoc(doc(db, 'resumes', resumeId));
           }
 
-          set(state => ({
-            resumes: state.resumes.filter(r => r.id !== resumeId),
-            currentResume: state.currentResume?.id === resumeId ? undefined : state.currentResume
+          set((state) => ({
+            resumes: state.resumes.filter((r) => r.id !== resumeId),
+            currentResume:
+              state.currentResume?.id === resumeId ? undefined : state.currentResume,
           }));
         } catch (error) {
           console.error('Delete failed:', error);

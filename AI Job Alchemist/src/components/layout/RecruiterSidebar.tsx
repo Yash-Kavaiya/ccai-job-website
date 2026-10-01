@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -10,12 +9,8 @@ import {
   Users,
   FileText,
   Calendar,
-  Settings,
-  Brain,
-  BarChart3,
   UserPlus,
   Building2,
-  MessageSquare
 } from 'lucide-react';
 
 interface RecruiterSidebarProps {
@@ -26,43 +21,36 @@ const navigationItems = [
   {
     title: 'Overview',
     items: [
-      { icon: Home, label: 'Dashboard', href: '/recruiter/dashboard', badge: null },
-      { icon: BarChart3, label: 'Analytics', href: '/recruiter/analytics', badge: null },
-    ]
+      { icon: Home, label: 'Dashboard', href: '/recruiter/dashboard' },
+    ],
   },
   {
     title: 'Jobs',
     items: [
-      { icon: PlusCircle, label: 'Post a Job', href: '/recruiter/jobs/new', badge: null },
-      { icon: Briefcase, label: 'Manage Jobs', href: '/recruiter/jobs', badge: null },
-    ]
+      { icon: PlusCircle, label: 'Post a Job', href: '/recruiter/jobs/new' },
+      { icon: Briefcase, label: 'Manage Jobs', href: '/recruiter/jobs' },
+    ],
   },
   {
     title: 'Candidates',
     items: [
-      { icon: Users, label: 'Browse Candidates', href: '/recruiter/candidates', badge: 'AI' },
-      { icon: FileText, label: 'Applications', href: '/recruiter/applications', badge: null },
-      { icon: Calendar, label: 'Interviews', href: '/recruiter/interviews', badge: null },
-    ]
-  },
-  {
-    title: 'Communication',
-    items: [
-      { icon: MessageSquare, label: 'Messages', href: '/recruiter/messages', badge: 'New' },
-    ]
+      { icon: Users, label: 'Browse Candidates', href: '/recruiter/candidates' },
+      { icon: FileText, label: 'Applications', href: '/recruiter/applications' },
+      { icon: Calendar, label: 'Interviews', href: '/recruiter/interviews' },
+    ],
   },
   {
     title: 'Team',
     items: [
-      { icon: UserPlus, label: 'Team Members', href: '/recruiter/team', badge: null },
-    ]
+      { icon: UserPlus, label: 'Team Members', href: '/recruiter/team' },
+    ],
   },
   {
     title: 'Settings',
     items: [
-      { icon: Building2, label: 'Company Profile', href: '/recruiter/settings', badge: null },
-    ]
-  }
+      { icon: Building2, label: 'Company Profile', href: '/recruiter/settings' },
+    ],
+  },
 ];
 
 export function RecruiterSidebar({ className }: RecruiterSidebarProps) {
@@ -92,14 +80,6 @@ export function RecruiterSidebar({ className }: RecruiterSidebarProps) {
                   >
                     <item.icon className="w-4 h-4" />
                     <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge && (
-                      <Badge
-                        variant={item.badge === 'AI' ? 'default' : 'secondary'}
-                        className="text-xs px-1.5 py-0.5"
-                      >
-                        {item.badge}
-                      </Badge>
-                    )}
                   </Button>
                 ))}
               </div>
@@ -108,22 +88,22 @@ export function RecruiterSidebar({ className }: RecruiterSidebarProps) {
         </div>
       </ScrollArea>
 
-      {/* Bottom CTA */}
       <div className="p-4 border-t">
-        <div className="glass-card p-4 rounded-lg">
+        <div className="rounded-xl border bg-muted/40 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4 text-accent" />
-            <span className="text-sm font-medium">Find Top Talent</span>
+            <span className="text-sm font-medium">Find top talent</span>
           </div>
           <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-            Use AI-powered matching to find the perfect candidates for your roles
+            Browse candidates and manage applications for your open roles.
           </p>
           <Button
             size="sm"
-            className="w-full ai-gradient text-white"
+            className="w-full"
+            variant="outline"
             onClick={() => navigate('/recruiter/candidates')}
           >
-            Search Candidates
+            Search candidates
           </Button>
         </div>
       </div>

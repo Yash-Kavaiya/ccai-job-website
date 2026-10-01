@@ -47,17 +47,15 @@ export function HomePage() {
   }
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate('/jobs', { state: { searchQuery } });
-    }
+    navigate('/signup');
   };
 
   const handleUploadResume = () => {
-    navigate('/resume');
+    navigate('/signup');
   };
 
   const handleViewJobs = () => {
-    navigate('/jobs');
+    navigate('/signup');
   };
 
   const handleStartJourney = () => {
@@ -76,54 +74,54 @@ export function HomePage() {
     navigate('/recruiter/signup');
   };
 
-  const handleJobClick = (job: any) => {
-    navigate('/jobs', { state: { selectedJob: job } });
+  const handleJobClick = (_job: any) => {
+    navigate('/signup');
   };
 
   const features = [
     {
       icon: Brain,
       title: 'AI-Powered Job Matching',
-      description: 'Advanced algorithms match you with perfect AI roles at top leading tech and AI companies.',
+      description: 'Rank open roles against your resume with fast keyword and skills matching.',
       badge: 'Smart'
     },
     {
       icon: FileText,
       title: 'Resume ATS Optimization',
-      description: 'Get instant ATS scores and AI-generated suggestions to improve your resume for AI positions.',
+      description: 'Upload or paste a resume to get ATS-oriented keyword feedback for AI roles.',
       badge: 'Essential'
     },
     {
       icon: MessageSquare,
       title: 'Mock AI Interviews',
-      description: 'Practice with AI interviewers for roles in CCAI, Copilot development, Lex, and more.',
-      badge: 'Beta'
+      description: 'Practice interviews for AI and applied ML roles and track your scores.',
+      badge: 'Practice'
     },
     {
       icon: Search,
-      title: 'Multi-Source Job Aggregation',
-      description: 'Search jobs from LinkedIn, Indeed, Twitter/X, Reddit, and company websites in one place.',
-      badge: 'Comprehensive'
+      title: 'Unified Job Board',
+      description: 'Browse active roles from your AIJobHub job board in one place.',
+      badge: 'Jobs'
     },
     {
       icon: Zap,
-      title: 'One-Click Applications',
-      description: 'Apply to multiple jobs instantly with AI-optimized applications tailored for each role.',
+      title: 'Quick Apply',
+      description: 'Apply to matched roles from a single apply workspace.',
       badge: 'Fast'
     },
     {
       icon: TrendingUp,
-      title: 'Market Intelligence',
-      description: 'Stay ahead with AI job market trends, salary insights, and skill demand analytics.',
+      title: 'Career Insights',
+      description: 'See personalized next steps from your real resumes, interviews, and applications.',
       badge: 'Insights'
     }
   ];
 
   const stats = [
-    { number: '10,000+', label: 'AI Jobs Tracked' },
-    { number: '500+', label: 'Companies Monitored' },
-    { number: '95%', label: 'Match Accuracy' },
-    { number: '3x', label: 'Faster Applications' }
+    { number: 'AI-first', label: 'Role Focus' },
+    { number: '2 paths', label: 'Candidate & Recruiter' },
+    { number: 'Live', label: 'Job Matching' },
+    { number: 'ATS', label: 'Resume Scoring' }
   ];
 
   const specializations = [
@@ -340,7 +338,7 @@ export function HomePage() {
                     <Upload className="w-4 h-4" />
                     Upload Resume to Get Started
                   </Button>
-                  <Button size="lg" variant="ghost" className="gap-2" onClick={() => navigate('/interview')}>
+                  <Button size="lg" variant="ghost" className="gap-2" onClick={() => navigate('/signup')}>
                     <Play className="w-4 h-4" />
                     Try Mock Interview
                   </Button>

@@ -38,7 +38,7 @@ type CompanySettingsFormValues = z.infer<typeof companySettingsSchema>;
 
 export function CompanySettingsPage() {
   const { toast } = useToast();
-  const { companyProfile, hiringNeeds, loadRecruiterProfile, isLoading } = useRecruiterStore();
+  const { companyProfile, hiringNeeds, loadRecruiterProfile, updateCompanyProfile, isLoading } = useRecruiterStore();
 
   useEffect(() => {
     loadRecruiterProfile();
@@ -68,12 +68,17 @@ export function CompanySettingsPage() {
 
   const onSubmit = async (data: CompanySettingsFormValues) => {
     try {
-      // TODO: Implement update in recruiter store
+      await updateCompanyProfile({
+        name: data.name,
+        size: data.size,
+        industry: data.industry,
+        website: data.website,
+      });
       toast({
         title: 'Settings saved',
         description: 'Your company profile has been updated.',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to save settings. Please try again.',

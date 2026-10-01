@@ -81,6 +81,10 @@ jobs:
         if: steps.vercel_creds.outputs.skip != 'true'
         run: npm install --global vercel@latest
 
+      - name: Install app dependencies
+        if: steps.vercel_creds.outputs.skip != 'true'
+        run: npm ci --legacy-peer-deps
+
       - name: Pull Vercel environment
         if: steps.vercel_creds.outputs.skip != 'true'
         env:

@@ -116,7 +116,7 @@ Ensure all `VITE_FIREBASE_*` variables are set in the Vercel project for the env
 
 ### Wrong root directory
 
-The app lives in `AI Job Alchemist/`. In the Vercel dashboard, set **Root Directory** to `AI Job Alchemist`, or always run the CLI from that folder.
+The app lives in `AI Job Alchemist/`. In the Vercel dashboard, set **Root Directory** to `AI Job Alchemist`. The GitHub Actions deploy workflow runs the Vercel CLI from the **repo root** so that path is not doubled.
 
 ### Auth / CORS after deploy
 

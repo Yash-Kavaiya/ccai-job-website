@@ -125,6 +125,16 @@ function App() {
             }
           />
           <Route
+            path="/recruiter/jobs/:jobId"
+            element={
+              <RoleBasedRoute allowedRoles={['recruiter']}>
+                <DashboardLayout>
+                  <PostJobPage />
+                </DashboardLayout>
+              </RoleBasedRoute>
+            }
+          />
+          <Route
             path="/recruiter/jobs"
             element={
               <RoleBasedRoute allowedRoles={['recruiter']}>

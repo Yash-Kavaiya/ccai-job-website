@@ -55,7 +55,7 @@ export default function JobSearchPage() {
       : searchParams.get('tab') === 'apply'
         ? 'apply'
         : searchParams.get('tab') === 'saved'
-          ? 'search'
+          ? 'saved'
           : 'search';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showFilters, setShowFilters] = useState(false);
@@ -71,10 +71,8 @@ export default function JobSearchPage() {
       setActiveTab('matches');
     } else if (searchParams.get('tab') === 'apply') {
       setActiveTab('apply');
-    } else if (searchParams.get('tab') === 'saved' || !searchParams.get('tab')) {
-      if (location.pathname === '/jobs' && searchParams.get('tab') === 'saved') {
-        setActiveTab('search');
-      }
+    } else if (searchParams.get('tab') === 'saved') {
+      setActiveTab('saved');
     }
   }, [location.pathname, searchParams]);
 
@@ -114,7 +112,12 @@ export default function JobSearchPage() {
     batchApplyToJobs,
   } = useJobMatchingStore();
 
-  const { resumes } = useResumeStore();
+  const { resumes, currentResume, getMatchText, fetchResumes } = useResumeStore();
+  const savedMatches = matches.filter((m) => m.is_bookmarked);
+
+  useEffect(() => {
+    fetchResumes();
+  }, [fetchResumes]);
 
   useEffect(() => {
     // Load existing jobs on component mount
@@ -155,8 +158,8 @@ export default function JobSearchPage() {
   const handleFindMatches = async () => {
     if (resumes.length === 0) {
       toast({
-        title: "Resume Required",
-        description: "Please upload a resume first to find job matches",
+        title: "Resume required",
+        description: "Upload or paste a resume first, then run matching",
         variant: "destructive",
       });
       return;
@@ -164,22 +167,31 @@ export default function JobSearchPage() {
 
     if (jobs.length === 0) {
       toast({
-        title: "No Jobs Available",
-        description: "Please search for jobs first",
+        title: "No jobs available",
+        description: "Refresh the job board first, then match again",
         variant: "destructive",
       });
       return;
     }
 
-    // Use the latest resume
-    const latestResume = resumes[resumes.length - 1];
-    const resumeText = latestResume?.name || 'User Resume';
+    const resumeText = getMatchText(currentResume?.id || resumes[0]?.id);
+    if (!resumeText || resumeText.length < 8) {
+      toast({
+        title: "Resume content needed",
+        description: "Paste resume text on the Resume page so matching can use your skills",
+        variant: "destructive",
+      });
+      return;
+    }
 
     await findJobMatches(resumeText);
+    const count = useJobMatchingStore.getState().matches.length;
 
     toast({
-      title: "Matching Complete",
-      description: `Found ${matches.length} potential matches`,
+      title: "Matching complete",
+      description: count > 0
+        ? `Found ${count} ranked match${count === 1 ? '' : 'es'}`
+        : "No strong matches yet — try refreshing jobs or enriching your resume",
     });
 
     setActiveTab('matches');
@@ -651,26 +663,30 @@ export default function JobSearchPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto gap-1">
           <TabsTrigger value="search" className="gap-2">
             <Search className="h-4 w-4" />
-            Search Jobs
+            Search
           </TabsTrigger>
-          <TabsTrigger value="aggregation" className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Job Aggregation
+          <TabsTrigger value="saved" className="gap-2">
+            <Bookmark className="h-4 w-4" />
+            Saved ({savedMatches.length})
           </TabsTrigger>
           <TabsTrigger value="matches" className="gap-2">
             <Target className="h-4 w-4" />
-            My Matches ({matches.length})
+            Matches ({matches.length})
           </TabsTrigger>
           <TabsTrigger value="apply" className="gap-2">
             <Send className="h-4 w-4" />
-            One-Click Apply ({batchApplyJobs.length})
+            Apply ({batchApplyJobs.length})
+          </TabsTrigger>
+          <TabsTrigger value="aggregation" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Sync
           </TabsTrigger>
           <TabsTrigger value="analytics" className="gap-2">
             <TrendingUp className="h-4 w-4" />
-            Analytics
+            Prefs
           </TabsTrigger>
         </TabsList>
 
@@ -678,9 +694,9 @@ export default function JobSearchPage() {
           {/* Search Controls */}
           <Card>
             <CardHeader>
-              <CardTitle>AI Job Search & Vector Matching</CardTitle>
+              <CardTitle>AI job search & matching</CardTitle>
               <CardDescription>
-                Search for AI jobs, upload JD for similarity matching, or aggregate from top sources
+                Search active roles, match against your resume instantly, or paste a job description
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -713,7 +729,7 @@ export default function JobSearchPage() {
                     size="sm"
                     onClick={() => setShowJDMatcher(!showJDMatcher)}
                   >
-                    {showJDMatcher ? 'Hide' : 'Show'} JD Matcher
+                    {showJDMatcher ? 'Hide' : 'Show'}
                   </Button>
                 </div>
 
@@ -951,6 +967,35 @@ export default function JobSearchPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="saved" className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold">Saved jobs</h2>
+            <p className="text-muted-foreground">
+              Bookmarked matches from your job board
+            </p>
+          </div>
+          <div className="grid gap-4">
+            {savedMatches.map((match) => {
+              const job = getJobById(match.job_id);
+              return job ? renderJobCard(job, match) : null;
+            })}
+            {savedMatches.length === 0 && (
+              <Card className="text-center py-12 border-border/60 shadow-none">
+                <CardContent>
+                  <Bookmark className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No saved jobs yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Bookmark roles from Search or Matches to collect them here
+                  </p>
+                  <Button variant="outline" onClick={() => setActiveTab('search')}>
+                    Browse jobs
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="aggregation" className="space-y-6">
           <JobAggregationPanel />
         </TabsContent>
@@ -958,15 +1003,15 @@ export default function JobSearchPage() {
         <TabsContent value="matches" className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Your Job Matches</h2>
+              <h2 className="text-xl font-semibold">Your job matches</h2>
               <p className="text-muted-foreground">
-                AI-powered matches based on your resume and preferences
+                Fast keyword + skills ranking against your resume content
               </p>
             </div>
 
             <Button
               onClick={handleFindMatches}
-              disabled={matchingInProgress}
+              disabled={matchingInProgress || resumes.length === 0 || jobs.length === 0}
               className="gap-2"
             >
               {matchingInProgress ? (
@@ -974,7 +1019,7 @@ export default function JobSearchPage() {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              Refresh Matches
+              Refresh matches
             </Button>
           </div>
 
@@ -985,21 +1030,32 @@ export default function JobSearchPage() {
             })}
 
             {matches.length === 0 && (
-              <Card className="text-center py-12">
+              <Card className="text-center py-12 border-border/60 shadow-none">
                 <CardContent>
                   <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-medium mb-2">No matches yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    Upload a resume and search for jobs to find matches
+                    {resumes.length === 0
+                      ? 'Add a resume (upload or paste text), then run matching'
+                      : jobs.length === 0
+                        ? 'Refresh the job board, then run matching'
+                        : 'Run matching to rank open roles against your resume'}
                   </p>
                   <div className="flex gap-2 justify-center">
-                    <Button variant="outline" asChild>
-                      <a href="/resume">Upload Resume</a>
-                    </Button>
-                    <Button onClick={handleFindMatches} className="gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Find Matches
-                    </Button>
+                    {resumes.length === 0 ? (
+                      <Button variant="outline" asChild>
+                        <a href="/resume">Add resume</a>
+                      </Button>
+                    ) : jobs.length === 0 ? (
+                      <Button variant="outline" onClick={() => aggregateJobs()}>
+                        Refresh jobs
+                      </Button>
+                    ) : (
+                      <Button onClick={handleFindMatches} className="gap-2" disabled={matchingInProgress}>
+                        <Sparkles className="h-4 w-4" />
+                        Find matches
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1204,7 +1260,7 @@ export default function JobSearchPage() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>Success rate:</span>
-                <span className="font-medium text-green-600">~85%</span>
+                <span className="font-medium text-green-600">Varies</span>
               </div>
             </div>
           </div>

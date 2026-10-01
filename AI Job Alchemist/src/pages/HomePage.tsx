@@ -14,26 +14,23 @@ import {
   CheckCircle,
   ArrowRight,
   Sparkles,
-  Globe,
   ShieldCheck,
   Upload,
-  ChevronRight,
   Play,
-  MapPin,
-  Clock,
-  DollarSign,
-  Building,
   Menu,
-  X,
   UserPlus,
-  LogIn
+  LogIn,
+  Mail,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
-import { LoginForm } from '@/components/auth/LoginForm';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const SUPPORT_EMAIL = 'support@aijobhub.app';
+const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('AIJobHub Support')}`;
+const PRO_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('AI Agents Pro — Early Access')}`;
+const SALES_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('AIJobHub Enterprise / Sales')}`;
 
 export function HomePage() {
   const { isAuthenticated } = useAuthStore();
@@ -47,17 +44,15 @@ export function HomePage() {
   }
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate('/jobs', { state: { searchQuery } });
-    }
+    navigate('/signup');
   };
 
   const handleUploadResume = () => {
-    navigate('/resume');
+    navigate('/signup');
   };
 
   const handleViewJobs = () => {
-    navigate('/jobs');
+    navigate('/signup');
   };
 
   const handleStartJourney = () => {
@@ -76,54 +71,50 @@ export function HomePage() {
     navigate('/recruiter/signup');
   };
 
-  const handleJobClick = (job: any) => {
-    navigate('/jobs', { state: { selectedJob: job } });
-  };
-
   const features = [
     {
       icon: Brain,
       title: 'AI-Powered Job Matching',
-      description: 'Advanced algorithms match you with perfect AI roles at top leading tech and AI companies.',
+      description: 'Rank open roles against your resume with fast keyword and skills matching.',
       badge: 'Smart'
     },
     {
       icon: FileText,
       title: 'Resume ATS Optimization',
-      description: 'Get instant ATS scores and AI-generated suggestions to improve your resume for AI positions.',
+      description: 'Upload or paste a resume to get ATS-oriented keyword feedback for AI roles.',
       badge: 'Essential'
     },
     {
       icon: MessageSquare,
       title: 'Mock AI Interviews',
-      description: 'Practice with AI interviewers for roles in CCAI, Copilot development, Lex, and more.',
-      badge: 'Beta'
+      description: 'Practice interviews for AI and applied ML roles and track your scores.',
+      badge: 'Practice'
     },
     {
       icon: Search,
-      title: 'Multi-Source Job Aggregation',
-      description: 'Search jobs from LinkedIn, Indeed, Twitter/X, Reddit, and company websites in one place.',
-      badge: 'Comprehensive'
+      title: 'Unified Job Board',
+      description: 'Browse active roles from your AIJobHub job board in one place.',
+      badge: 'Jobs'
     },
     {
       icon: Zap,
-      title: 'One-Click Applications',
-      description: 'Apply to multiple jobs instantly with AI-optimized applications tailored for each role.',
+      title: 'Quick Apply',
+      description: 'Apply to matched roles from a single apply workspace.',
       badge: 'Fast'
     },
     {
       icon: TrendingUp,
-      title: 'Market Intelligence',
-      description: 'Stay ahead with AI job market trends, salary insights, and skill demand analytics.',
+      title: 'Career Insights',
+      description: 'See personalized next steps from your real resumes, interviews, and applications.',
       badge: 'Insights'
     }
   ];
 
   const stats = [
-    { number: '10,000+', label: 'AI Jobs Tracked' },
-    { number: '500+', label: 'Companies Monitored' },
-    { number: '95%', label: 'Match Accuracy' },
-    { number: '3x', label: 'Faster Applications' }
+    { number: 'AI-first', label: 'Role Focus' },
+    { number: '2 paths', label: 'Candidate & Recruiter' },
+    { number: 'Live', label: 'Job Matching' },
+    { number: 'ATS', label: 'Resume Scoring' }
   ];
 
   const specializations = [
@@ -137,49 +128,6 @@ export function HomePage() {
     'AI Agents',
     'Machine Learning',
     'NLP Engineering'
-  ];
-
-  const featuredJobs = [
-    {
-      title: 'Copilot Engineer',
-      company: 'Global Tech Giant',
-      location: 'Seattle, WA',
-      salary: '$150K - $200K',
-      type: 'Full-time',
-      posted: '2 days ago',
-      tags: ['AI', 'Copilot', 'TypeScript', 'Azure'],
-      match: 95
-    },
-    {
-      title: 'CCAI Specialist',
-      company: 'Leading AI Company',
-      location: 'Mountain View, CA',
-      salary: '$160K - $220K',
-      type: 'Full-time',
-      posted: '1 day ago',
-      tags: ['CCAI', 'Dialogflow', 'GCP', 'Python'],
-      match: 92
-    },
-    {
-      title: 'Lex Developer',
-      company: 'Major Tech Company',
-      location: 'Austin, TX',
-      salary: '$140K - $185K',
-      type: 'Full-time',
-      posted: '3 days ago',
-      tags: ['Lex', 'AWS', 'Conversational AI', 'Node.js'],
-      match: 88
-    },
-    {
-      title: 'AI Agent Developer',
-      company: 'OpenAI',
-      location: 'San Francisco, CA',
-      salary: '$180K - $250K',
-      type: 'Full-time',
-      posted: '1 day ago',
-      tags: ['AI Agents', 'LangChain', 'Python', 'ML'],
-      match: 94
-    }
   ];
 
   return (
@@ -340,7 +288,7 @@ export function HomePage() {
                     <Upload className="w-4 h-4" />
                     Upload Resume to Get Started
                   </Button>
-                  <Button size="lg" variant="ghost" className="gap-2" onClick={() => navigate('/interview')}>
+                  <Button size="lg" variant="ghost" className="gap-2" onClick={() => navigate('/signup')}>
                     <Play className="w-4 h-4" />
                     Try Mock Interview
                   </Button>
@@ -365,83 +313,31 @@ export function HomePage() {
         <div className="absolute bottom-20 left-20 w-24 h-24 bg-accent opacity-10 rounded-full blur-2xl"></div>
       </section>
 
-      {/* Featured Jobs Section */}
+      {/* Jobs CTA Section */}
       <section id="jobs" className="py-20 bg-card/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-12">
-            <div>
-              <Badge className="mb-4" variant="outline">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                Hot Jobs
-              </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Featured AI Roles
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Top opportunities at leading companies. Updated daily.
-              </p>
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <Badge className="mb-2" variant="outline">
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Live job board
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Browse real AI roles after you join
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Sign up to search the live board, match roles to your resume, and apply from one workspace.
+              No sample match scores — only your real resume and live postings.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" className="ai-gradient text-white border-0 gap-2" onClick={handleSignUp}>
+                Create free account
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              <Button size="lg" variant="outline" className="gap-2" onClick={handleViewJobs}>
+                <Search className="w-4 h-4" />
+                Continue to job search
+              </Button>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold ai-gradient bg-clip-text text-transparent">100+</div>
-              <div className="text-sm text-muted-foreground">CCAI Jobs Aggregated Daily</div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredJobs.map((job) => (
-              <Card key={`${job.company}-${job.title}`} className="hover:shadow-xl transition-all duration-300 border-0 shadow-lg group cursor-pointer" onClick={() => handleJobClick(job)}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                      <Building className="w-5 h-5 text-accent" />
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {job.match}% Match
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-lg leading-tight group-hover:text-accent transition-colors">
-                    {job.title}
-                  </CardTitle>
-                  <CardDescription className="font-medium text-foreground">
-                    {job.company}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3 h-3" />
-                      {job.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-3 h-3" />
-                      {job.salary}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3 h-3" />
-                      {job.posted}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {job.tags.slice(0, 3).map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <Button className="w-full group/btn" variant="outline">
-                    View Details
-                    <ChevronRight className="w-3 h-3 ml-1 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <Button variant="outline" size="lg" className="gap-2" onClick={handleViewJobs}>
-              View All AI Jobs
-              <ArrowRight className="w-4 h-4" />
-            </Button>
           </div>
         </div>
       </section>
@@ -599,31 +495,37 @@ export function HomePage() {
               </div>
               <CardHeader>
                 <CardTitle className="text-2xl">Pro</CardTitle>
-                <CardDescription>For serious job seekers</CardDescription>
+                <CardDescription>AI Agents premium — under development</CardDescription>
                 <div className="text-3xl font-bold">$29<span className="text-sm font-normal">/month</span></div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success" />
-                    <span className="text-sm">Advanced AI job matching</span>
+                    <span className="text-sm">Everything in Free</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success" />
-                    <span className="text-sm">Unlimited mock interviews</span>
+                    <span className="text-sm">AI Agents career automation</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success" />
-                    <span className="text-sm">AI resume optimization</span>
+                    <span className="text-sm">Trend monitoring & coaching digests</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-success" />
-                    <span className="text-sm">One-click applications</span>
+                    <span className="text-sm">Early access before public launch</span>
                   </div>
                 </div>
-                <Button className="w-full ai-gradient text-white border-0" onClick={handleSignUp}>
-                  Start Pro Trial
+                <Button className="w-full ai-gradient text-white border-0" asChild>
+                  <a href={PRO_MAILTO}>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Request Pro early access
+                  </a>
                 </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Self-serve billing coming soon. Email {SUPPORT_EMAIL}.
+                </p>
               </CardContent>
             </Card>
 
@@ -652,8 +554,8 @@ export function HomePage() {
                     <span className="text-sm">Priority support</span>
                   </div>
                 </div>
-                <Button className="w-full" variant="outline" onClick={handleSignUp}>
-                  Contact Sales
+                <Button className="w-full" variant="outline" asChild>
+                  <a href={SALES_MAILTO}>Contact Sales</a>
                 </Button>
               </CardContent>
             </Card>
@@ -693,8 +595,11 @@ export function HomePage() {
                 <Users className="w-5 h-5" />
                 Hiring with us
               </Button>
-              <Button size="lg" variant="outline" className="gap-2 w-full">
-                Contact Sales
+              <Button size="lg" variant="outline" className="gap-2 w-full" asChild>
+                <a href={SALES_MAILTO}>
+                  <Mail className="w-4 h-4" />
+                  Contact Sales
+                </a>
               </Button>
             </div>
           </div>
@@ -731,12 +636,18 @@ export function HomePage() {
               The premier platform for AI career advancement. Find your next role in artificial intelligence.
             </p>
             <div className="flex gap-6 text-sm text-muted-foreground">
-              <button className="hover:text-foreground transition-colors">Privacy</button>
-              <button className="hover:text-foreground transition-colors">Terms</button>
-              <button className="hover:text-foreground transition-colors">Support</button>
+              <a href={SUPPORT_MAILTO} className="hover:text-foreground transition-colors">
+                Support
+              </a>
+              <a href={SALES_MAILTO} className="hover:text-foreground transition-colors">
+                Sales
+              </a>
+              <a href={PRO_MAILTO} className="hover:text-foreground transition-colors">
+                Pro early access
+              </a>
             </div>
             <p className="text-xs text-muted-foreground">
-              © 2024 AIJobHub. All rights reserved.
+              © {new Date().getFullYear()} AIJobHub. All rights reserved.
             </p>
           </div>
         </div>

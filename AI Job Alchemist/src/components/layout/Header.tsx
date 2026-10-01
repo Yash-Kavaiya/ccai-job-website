@@ -13,7 +13,6 @@ import {
   Brain,
   Settings,
   LogOut,
-  Search,
   Menu,
   Moon,
   Sun,
@@ -99,31 +98,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
           </button>
         </div>
-
-        <nav className="hidden md:flex items-center gap-1">
-          {user?.role !== 'recruiter' && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                onClick={() => navigate('/jobs')}
-              >
-                <Search className="w-4 h-4" />
-                <span className="hidden lg:inline">Jobs</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2"
-                onClick={() => navigate('/matching')}
-              >
-                <Brain className="w-4 h-4" />
-                <span className="hidden lg:inline">Matching</span>
-              </Button>
-            </>
-          )}
-        </nav>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">

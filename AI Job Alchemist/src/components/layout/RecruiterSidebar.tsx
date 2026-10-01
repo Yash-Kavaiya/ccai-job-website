@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -21,34 +22,34 @@ const navigationItems = [
   {
     title: 'Overview',
     items: [
-      { icon: Home, label: 'Dashboard', href: '/recruiter/dashboard' },
+      { icon: Home, label: 'Dashboard', href: '/recruiter/dashboard', badge: null as string | null },
     ],
   },
   {
     title: 'Jobs',
     items: [
-      { icon: PlusCircle, label: 'Post a Job', href: '/recruiter/jobs/new' },
-      { icon: Briefcase, label: 'Manage Jobs', href: '/recruiter/jobs' },
+      { icon: PlusCircle, label: 'Post a Job', href: '/recruiter/jobs/new', badge: null },
+      { icon: Briefcase, label: 'Manage Jobs', href: '/recruiter/jobs', badge: null },
     ],
   },
   {
     title: 'Candidates',
     items: [
-      { icon: Users, label: 'Browse Candidates', href: '/recruiter/candidates' },
-      { icon: FileText, label: 'Applications', href: '/recruiter/applications' },
-      { icon: Calendar, label: 'Interviews', href: '/recruiter/interviews' },
+      { icon: Users, label: 'Browse Candidates', href: '/recruiter/candidates', badge: null },
+      { icon: FileText, label: 'Applications', href: '/recruiter/applications', badge: null },
+      { icon: Calendar, label: 'Interviews', href: '/recruiter/interviews', badge: 'Soon' },
     ],
   },
   {
     title: 'Team',
     items: [
-      { icon: UserPlus, label: 'Team Members', href: '/recruiter/team' },
+      { icon: UserPlus, label: 'Team Members', href: '/recruiter/team', badge: 'Soon' },
     ],
   },
   {
     title: 'Settings',
     items: [
-      { icon: Building2, label: 'Company Profile', href: '/recruiter/settings' },
+      { icon: Building2, label: 'Company Profile', href: '/recruiter/settings', badge: null },
     ],
   },
 ];
@@ -57,6 +58,16 @@ export function RecruiterSidebar({ className }: RecruiterSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+
+  const isActive = (href: string) => {
+    if (href === '/recruiter/jobs') {
+      return currentPath === '/recruiter/jobs' || (currentPath.startsWith('/recruiter/jobs/') && !currentPath.endsWith('/new'));
+    }
+    if (href === '/recruiter/jobs/new') {
+      return currentPath === '/recruiter/jobs/new';
+    }
+    return currentPath === href;
+  };
 
   return (
     <div className={cn('flex h-full w-64 flex-col bg-card border-r', className)}>
@@ -71,15 +82,20 @@ export function RecruiterSidebar({ className }: RecruiterSidebarProps) {
                 {section.items.map((item) => (
                   <Button
                     key={item.href}
-                    variant={currentPath === item.href ? 'secondary' : 'ghost'}
+                    variant={isActive(item.href) ? 'secondary' : 'ghost'}
                     className={cn(
                       'w-full justify-start gap-3 h-10',
-                      currentPath === item.href && 'bg-accent text-accent-foreground'
+                      isActive(item.href) && 'bg-accent text-accent-foreground'
                     )}
                     onClick={() => navigate(item.href)}
                   >
                     <item.icon className="w-4 h-4" />
                     <span className="flex-1 text-left">{item.label}</span>
+                    {item.badge && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                        {item.badge}
+                      </Badge>
+                    )}
                   </Button>
                 ))}
               </div>

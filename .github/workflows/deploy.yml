@@ -34,10 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          # Repo .nvmrc is 18 (EOL). Keep Node 20 for the Vercel CLI and for
-          # `vercel build`, matching the runtime used before this workflow
-          # failed on a missing token. Action runtime is Node 24 (checkout v7
-          # and setup-node v7); that is not the version used to build the app.
+          # Repo .nvmrc is 18 (EOL). Keep Node 20 for the Vercel CLI.
           node-version: 20
           cache: npm
           cache-dependency-path: "AI Job Alchemist/package-lock.json"
@@ -81,61 +78,28 @@ jobs:
         if: steps.vercel_creds.outputs.skip != 'true'
         run: npm install --global vercel@latest
 
-      - name: Install app dependencies
-        if: steps.vercel_creds.outputs.skip != 'true'
-        run: npm ci --legacy-peer-deps
-
-      - name: Pull Vercel environment
+      - name: Link Vercel project
         if: steps.vercel_creds.outputs.skip != 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
-            environment=production
-          else
-            environment=preview
-          fi
-          vercel pull --yes --environment="${environment}" --token="${VERCEL_TOKEN}"
+          mkdir -p .vercel
+          cat > .vercel/project.json <<EOF
+          {"orgId":"${VERCEL_ORG_ID}","projectId":"${VERCEL_PROJECT_ID}"}
+          EOF
 
-      - name: Build project artifacts
-        if: steps.vercel_creds.outputs.skip != 'true'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          # Keep devDependencies (vite/tsc) available for local `vercel build`.
-          NPM_CONFIG_PRODUCTION: "false"
-        run: |
-          # Project dashboard settings may use bare `vite build`; ensure bins resolve.
-          export PATH="${PWD}/node_modules/.bin:${PATH}"
-          test -x node_modules/.bin/vite
-          # Prefer package.json build script (adds node_modules/.bin via npm).
-          if [ -f .vercel/project.json ]; then
-            node -e '
-              const fs = require("fs");
-              const p = ".vercel/project.json";
-              const j = JSON.parse(fs.readFileSync(p, "utf8"));
-              j.settings = j.settings || {};
-              j.settings.buildCommand = "npm run build";
-              j.settings.installCommand = "npm ci --legacy-peer-deps";
-              fs.writeFileSync(p, JSON.stringify(j, null, 2));
-              console.log("Forced buildCommand:", j.settings.buildCommand);
-            '
-          fi
-          if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
-            vercel build --prod --token="${VERCEL_TOKEN}"
-          else
-            vercel build --token="${VERCEL_TOKEN}"
-          fi
-
-      - name: Deploy project artifacts to Vercel
+      - name: Deploy to Vercel
         if: steps.vercel_creds.outputs.skip != 'true'
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          # Build on Vercel (remote) so vite/devDependencies resolve correctly.
+          # Local `vercel build --prebuilt` fails in this monorepo path layout.
           if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
-            url=$(vercel deploy --prebuilt --prod --token="${VERCEL_TOKEN}")
+            url=$(vercel deploy --prod --yes --token="${VERCEL_TOKEN}")
           else
-            url=$(vercel deploy --prebuilt --token="${VERCEL_TOKEN}")
+            url=$(vercel deploy --yes --token="${VERCEL_TOKEN}")
           fi
           echo "url=${url}" >> "${GITHUB_OUTPUT}"
           echo "Deployed to: ${url}"

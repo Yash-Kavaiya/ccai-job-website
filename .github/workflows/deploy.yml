@@ -101,7 +101,25 @@ jobs:
         if: steps.vercel_creds.outputs.skip != 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          # Keep devDependencies (vite/tsc) available for local `vercel build`.
+          NPM_CONFIG_PRODUCTION: "false"
         run: |
+          # Project dashboard settings may use bare `vite build`; ensure bins resolve.
+          export PATH="${PWD}/node_modules/.bin:${PATH}"
+          test -x node_modules/.bin/vite
+          # Prefer package.json build script (adds node_modules/.bin via npm).
+          if [ -f .vercel/project.json ]; then
+            node -e '
+              const fs = require("fs");
+              const p = ".vercel/project.json";
+              const j = JSON.parse(fs.readFileSync(p, "utf8"));
+              j.settings = j.settings || {};
+              j.settings.buildCommand = "npm run build";
+              j.settings.installCommand = "npm ci --legacy-peer-deps";
+              fs.writeFileSync(p, JSON.stringify(j, null, 2));
+              console.log("Forced buildCommand:", j.settings.buildCommand);
+            '
+          fi
           if [ "${GITHUB_REF}" = "refs/heads/main" ] && [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
             vercel build --prod --token="${VERCEL_TOKEN}"
           else

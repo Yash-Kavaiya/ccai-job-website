@@ -50,7 +50,7 @@ In the Vercel project → **Settings → Environment Variables**, add these for 
 | `VITE_FIREBASE_APP_ID` | your Firebase app ID |
 | `VITE_FIREBASE_MEASUREMENT_ID` | your Analytics measurement ID (optional) |
 
-These are pulled into the CI build via `vercel pull` / `vercel build`.
+These are applied on Vercel during the remote build from GitHub Actions / Git integration.
 
 ## Step 4: Add GitHub Secrets
 
@@ -79,11 +79,11 @@ Two workflows run on pushes and pull requests to `main`:
 
 When the three secrets are set, Deploy to Vercel will:
 
-1. Pull Vercel project + env config
-2. Build with `vercel build`
-3. Deploy prebuilt artifacts (`--prod` on `main`, preview on same-repo PRs)
+1. Link the project via `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`
+2. Run `vercel deploy` so the build happens on Vercel (where Vite/devDependencies resolve correctly)
+3. Use `--prod` on `main`, preview deploys on same-repo PRs
 
-Pull requests opened from forks do not receive these secrets, so the deploy job is skipped for them. Typecheck still runs.
+Pull requests opened from forks do not receive these secrets, so the deploy job is skipped for them. Typecheck still runs. The Vercel Git integration may also create its own preview deployment in parallel.
 
 Check the GitHub Actions tab for the deployment URL.
 

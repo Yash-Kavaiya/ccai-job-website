@@ -53,9 +53,16 @@ export function ResumeUpload() {
         description: 'Your resume has been uploaded and analysis is starting...',
       });
     } catch (error) {
+      const description =
+        error instanceof Error
+          ? error.message
+          : 'Please try again or contact support';
+      const isQuota =
+        description.toLowerCase().includes('quota') ||
+        description.includes('storage/quota-exceeded');
       toast({
-        title: 'Upload Failed',
-        description: 'Please try again or contact support',
+        title: isQuota ? 'Storage quota exceeded' : 'Upload Failed',
+        description,
         variant: 'destructive',
       });
     }

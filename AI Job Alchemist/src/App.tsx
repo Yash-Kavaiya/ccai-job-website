@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HomePage } from "@/pages/HomePage";
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -31,6 +32,16 @@ import {
   CompanySettingsPage,
 } from "@/pages/recruiter";
 
+function CandidateShell({ children }: { children: ReactNode }) {
+  return (
+    <RoleBasedRoute allowedRoles={['candidate']}>
+      <DashboardLayout>
+        {children}
+      </DashboardLayout>
+    </RoleBasedRoute>
+  );
+}
+
 function App() {
   const { isAuthenticated } = useAuthStore();
 
@@ -62,7 +73,7 @@ function App() {
             element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RecruiterSignupPage />}
           />
 
-          {/* Recruiter Onboarding - must come before protected routes */}
+          {/* Recruiter Onboarding */}
           <Route
             path="/recruiter/onboarding"
             element={
@@ -72,7 +83,7 @@ function App() {
             }
           />
 
-          {/* Dashboard Redirect - routes to appropriate dashboard based on role */}
+          {/* Dashboard Redirect */}
           <Route
             path="/dashboard"
             element={
@@ -86,11 +97,9 @@ function App() {
           <Route
             path="/candidate/dashboard"
             element={
-              <RoleBasedRoute allowedRoles={['candidate']}>
-                <DashboardLayout>
-                  <DashboardPage />
-                </DashboardLayout>
-              </RoleBasedRoute>
+              <CandidateShell>
+                <DashboardPage />
+              </CandidateShell>
             }
           />
 
@@ -176,124 +185,73 @@ function App() {
             }
           />
 
+          {/* Candidate tools — role-gated + shared layout */}
           <Route
             path="/jobs"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobSearchPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <CandidateShell>
+                <JobSearchPage />
+              </CandidateShell>
             }
           />
-
-          <Route
-            path="/job-search"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobSearchPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/saved"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobSearchPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
+          <Route path="/job-search" element={<Navigate to="/jobs" replace />} />
+          <Route path="/saved" element={<Navigate to="/jobs?tab=saved" replace />} />
           <Route
             path="/matching"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobSearchPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <CandidateShell>
+                <JobSearchPage />
+              </CandidateShell>
             }
           />
-
-          <Route
-            path="/apply"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobSearchPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/apply" element={<Navigate to="/jobs?tab=apply" replace />} />
 
           <Route
             path="/settings"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <DashboardPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <CandidateShell>
+                <SettingsPage />
+              </CandidateShell>
             }
           />
 
           <Route
             path="/resume"
             element={
-              <ProtectedRoute>
+              <CandidateShell>
                 <ResumePage />
-              </ProtectedRoute>
+              </CandidateShell>
             }
           />
 
           <Route
             path="/interview"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <InterviewPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <SettingsPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <CandidateShell>
+                <InterviewPage />
+              </CandidateShell>
             }
           />
 
           <Route
             path="/social"
             element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <SocialPage />
-                </DashboardLayout>
-              </ProtectedRoute>
+              <CandidateShell>
+                <SocialPage />
+              </CandidateShell>
             }
           />
 
           <Route
             path="/ai-agents"
             element={
-              <ProtectedRoute>
+              <CandidateShell>
                 <AIAgentsPage />
-              </ProtectedRoute>
+              </CandidateShell>
             }
           />
 
-          {/* Public profile routes - these should be accessible to everyone */}
+          {/* Public profile routes */}
           <Route path="/profile/:profileSlug" element={<PublicProfilePage />} />
 
           <Route path="*" element={<NotFoundPage />} />

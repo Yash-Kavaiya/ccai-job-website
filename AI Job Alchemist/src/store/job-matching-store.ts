@@ -584,155 +584,156 @@ export const useJobMatchingStore = create<JobMatchingState>()(
         }
       },
 
-      // Enhanced Qdrant-style job matching with vector similarity
+      // Fast keyword/skills matching first; optional AI enrichment in background
       findJobMatches: async (resumeText?: string) => {
         set({ matchingInProgress: true, error: null });
 
         try {
-          const ai = new DevvAI();
           const jobs = get().jobs;
           const { similarity_threshold, company_niche } = get().filters;
           const userPrefs = get().userPreferences;
-          const embeddings = get().vectorEmbeddings;
 
           if (jobs.length === 0) {
-            throw new Error('No jobs available for matching. Please search or aggregate jobs first.');
+            throw new Error('No jobs available for matching. Please search or load jobs first.');
           }
 
           if (!resumeText) {
             throw new Error('Resume text is required for job matching.');
           }
 
-          // Generate or retrieve cached embeddings for resume
-          let resumeEmbedding = embeddings.get(`resume_${resumeText.slice(0, 100)}`);
-          if (!resumeEmbedding) {
-            resumeEmbedding = await generateEnhancedEmbedding(resumeText, ai);
-            embeddings.set(`resume_${resumeText.slice(0, 100)}`, resumeEmbedding);
-          }
-
-          const matches: JobMatch[] = [];
-
-          // Filter jobs by niche if specified (e.g., "Google CCAI")
           let jobsToSearch = jobs;
           if (company_niche) {
+            const niche = company_niche.toLowerCase();
             jobsToSearch = jobs.filter(job =>
-              job.title.toLowerCase().includes(company_niche.toLowerCase()) ||
-              job.description.toLowerCase().includes(company_niche.toLowerCase()) ||
-              job.company.toLowerCase().includes(company_niche.toLowerCase()) ||
-              job.ai_specializations.some(spec =>
-                spec.toLowerCase().includes(company_niche.toLowerCase())
-              )
+              job.title.toLowerCase().includes(niche) ||
+              job.description.toLowerCase().includes(niche) ||
+              job.company.toLowerCase().includes(niche) ||
+              job.ai_specializations.some(spec => spec.toLowerCase().includes(niche))
             );
           }
 
-          // Calculate similarity for each job with enhanced algorithm
-          for (const job of jobsToSearch) {
-            const jobKey = `job_${job.id}`;
-            let jobEmbedding = embeddings.get(jobKey);
-
-            if (!jobEmbedding) {
-              const jobText = `${job.title} ${job.description} ${job.skills.join(' ')} ${job.ai_specializations.join(' ')}`;
-              jobEmbedding = await generateEnhancedEmbedding(jobText, ai);
-              embeddings.set(jobKey, jobEmbedding);
-            }
-
-            // Enhanced similarity calculation with personalization
-            const baseSimilarity = calculateEnhancedCosineSimilarity(resumeEmbedding, jobEmbedding);
-            const personalizedScore = applyPersonalizationBoost(baseSimilarity, job, userPrefs);
-
-            // Apply Qdrant-style threshold filtering (default 0.7)
-            if (personalizedScore >= similarity_threshold) {
-              const matchReasons = await analyzeEnhancedMatchReasons(resumeText, job, ai, personalizedScore);
-
-              const match: JobMatch = {
-                id: `match_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          // Fast path: local keyword + skills scoring (sub-second)
+          const fastMatches: JobMatch[] = jobsToSearch
+            .map((job) => {
+              const { score, reasons } = scoreJobAgainstResumeFast(resumeText, job);
+              const personalizedScore = applyPersonalizationBoost(score, job, userPrefs);
+              return {
+                id: `match_${job.id}_${Date.now()}`,
                 job_id: job.id,
                 job_title: job.title,
                 company: job.company,
                 similarity_score: personalizedScore,
-                match_type: 'resume_vector',
-                match_reasons: matchReasons,
+                match_type: 'resume_fast',
+                match_reasons: reasons,
                 is_bookmarked: false,
                 application_status: 'not_applied',
                 created_at: new Date().toISOString(),
-              };
-
-              matches.push(match);
-            }
-          }
-
-          // Sort by similarity score (highest first)
-          matches.sort((a, b) => b.similarity_score - a.similarity_score);
-
-          // Store enhanced embeddings and matches
-          set({ vectorEmbeddings: embeddings });
-          await storeJobMatchesInDatabase(matches);
+              } as JobMatch;
+            })
+            .filter((m) => m.similarity_score >= Math.min(similarity_threshold, 0.35))
+            .sort((a, b) => b.similarity_score - a.similarity_score);
 
           set({
-            matches,
+            matches: fastMatches,
             matchingInProgress: false,
-            lastMatchDate: new Date().toISOString()
+            lastMatchDate: new Date().toISOString(),
           });
+
+          // Background enrichment with local embeddings (non-blocking, no sequential AI calls)
+          void (async () => {
+            try {
+              const embeddings = get().vectorEmbeddings;
+              const resumeKey = `resume_${resumeText.slice(0, 100)}`;
+              let resumeEmbedding = embeddings.get(resumeKey);
+              if (!resumeEmbedding) {
+                resumeEmbedding = generateAdvancedLocalEmbedding(resumeText);
+                embeddings.set(resumeKey, resumeEmbedding);
+              }
+
+              const enriched = fastMatches.map((match) => {
+                const job = jobsToSearch.find((j) => j.id === match.job_id);
+                if (!job) return match;
+                const jobKey = `job_${job.id}`;
+                let jobEmbedding = embeddings.get(jobKey);
+                if (!jobEmbedding) {
+                  const jobText = `${job.title} ${job.description} ${job.skills.join(' ')} ${job.ai_specializations.join(' ')}`;
+                  jobEmbedding = generateAdvancedLocalEmbedding(jobText);
+                  embeddings.set(jobKey, jobEmbedding);
+                }
+                const vectorScore = calculateEnhancedCosineSimilarity(resumeEmbedding!, jobEmbedding);
+                const blended = Math.min(1, match.similarity_score * 0.55 + vectorScore * 0.45);
+                return {
+                  ...match,
+                  similarity_score: blended,
+                  match_type: 'resume_hybrid',
+                };
+              }).sort((a, b) => b.similarity_score - a.similarity_score);
+
+              set({
+                vectorEmbeddings: embeddings,
+                matches: enriched,
+                lastMatchDate: new Date().toISOString(),
+              });
+
+              try {
+                await storeJobMatchesInDatabase(enriched.slice(0, 50));
+              } catch {
+                // Devv table persistence is optional
+              }
+            } catch (enrichError) {
+              console.warn('Background match enrichment skipped:', enrichError);
+            }
+          })();
 
         } catch (error: any) {
           set({ error: error.message || 'Failed to find job matches', matchingInProgress: false });
         }
       },
 
-      // Qdrant-style Job Description matching
+      // Fast JD matching with local embeddings (no blocking AI loop)
       findJobMatchesByJD: async (jobDescriptionText: string) => {
         set({ matchingInProgress: true, error: null, jobDescriptionText });
 
         try {
-          const ai = new DevvAI();
           const jobs = get().jobs;
           const { similarity_threshold } = get().filters;
           const embeddings = get().vectorEmbeddings;
 
           if (jobs.length === 0) {
-            throw new Error('No jobs available for matching. Please search or aggregate jobs first.');
+            throw new Error('No jobs available for matching. Please search or load jobs first.');
           }
 
-          // Generate embedding for input JD
-          const jdEmbedding = await generateEnhancedEmbedding(jobDescriptionText, ai);
+          const jdEmbedding = generateAdvancedLocalEmbedding(jobDescriptionText);
           embeddings.set(`input_jd_${Date.now()}`, jdEmbedding);
 
-          const matches: JobMatch[] = [];
-
-          // Find similar jobs to the input JD
-          for (const job of jobs) {
+          const matches: JobMatch[] = jobs.map((job) => {
             const jobKey = `job_${job.id}`;
             let jobEmbedding = embeddings.get(jobKey);
-
             if (!jobEmbedding) {
               const jobText = `${job.title} ${job.description} ${job.skills.join(' ')} ${job.ai_specializations.join(' ')}`;
-              jobEmbedding = await generateEnhancedEmbedding(jobText, ai);
+              jobEmbedding = generateAdvancedLocalEmbedding(jobText);
               embeddings.set(jobKey, jobEmbedding);
             }
 
-            const similarity = calculateEnhancedCosineSimilarity(jdEmbedding, jobEmbedding);
+            const { score: keywordScore, reasons } = scoreJobAgainstResumeFast(jobDescriptionText, job);
+            const vectorScore = calculateEnhancedCosineSimilarity(jdEmbedding, jobEmbedding);
+            const similarity = Math.min(1, keywordScore * 0.5 + vectorScore * 0.5);
 
-            if (similarity >= similarity_threshold) {
-              const matchReasons = await analyzeJDMatchReasons(jobDescriptionText, job, ai);
-
-              const match: JobMatch = {
-                id: `jd_match_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                job_id: job.id,
-                job_title: job.title,
-                company: job.company,
-                similarity_score: similarity,
-                match_type: 'job_description',
-                match_reasons: matchReasons,
-                is_bookmarked: false,
-                application_status: 'not_applied',
-                created_at: new Date().toISOString(),
-              };
-
-              matches.push(match);
-            }
-          }
-
-          matches.sort((a, b) => b.similarity_score - a.similarity_score);
+            return {
+              id: `jd_match_${job.id}_${Date.now()}`,
+              job_id: job.id,
+              job_title: job.title,
+              company: job.company,
+              similarity_score: similarity,
+              match_type: 'job_description',
+              match_reasons: reasons.length ? reasons : ['Semantic similarity to job description'],
+              is_bookmarked: false,
+              application_status: 'not_applied',
+              created_at: new Date().toISOString(),
+            } as JobMatch;
+          })
+            .filter((m) => m.similarity_score >= Math.min(similarity_threshold, 0.35))
+            .sort((a, b) => b.similarity_score - a.similarity_score);
 
           set({
             vectorEmbeddings: embeddings,
@@ -1962,6 +1963,57 @@ function extractKeywords(text: string): string[] {
 
   const lowerText = text.toLowerCase();
   return aiKeywords.filter(keyword => lowerText.includes(keyword));
+}
+
+/** Low-latency keyword/skills overlap scorer for instant match rankings */
+function scoreJobAgainstResumeFast(
+  resumeText: string,
+  job: JobListing
+): { score: number; reasons: string[] } {
+  const resume = resumeText.toLowerCase();
+  const jobBlob = `${job.title} ${job.description} ${job.skills.join(' ')} ${job.ai_specializations.join(' ')}`.toLowerCase();
+  const resumeKeywords = new Set(extractKeywords(resumeText));
+  const jobKeywords = new Set(extractKeywords(jobBlob));
+  const reasons: string[] = [];
+
+  let overlap = 0;
+  jobKeywords.forEach((kw) => {
+    if (resumeKeywords.has(kw) || resume.includes(kw)) {
+      overlap += 1;
+    }
+  });
+
+  const skillHits = (job.skills || []).filter((skill) =>
+    resume.includes(skill.toLowerCase())
+  );
+  if (skillHits.length) {
+    reasons.push(`Matched skills: ${skillHits.slice(0, 4).join(', ')}`);
+  }
+
+  const titleTokens = job.title.toLowerCase().split(/[^a-z0-9+#]+/).filter((t) => t.length > 2);
+  const titleHits = titleTokens.filter((t) => resume.includes(t)).length;
+  if (titleHits > 0) {
+    reasons.push('Title keywords appear in your resume');
+  }
+
+  const keywordScore = jobKeywords.size
+    ? overlap / jobKeywords.size
+    : skillHits.length / Math.max(job.skills.length || 1, 1);
+  const skillScore = job.skills.length
+    ? skillHits.length / job.skills.length
+    : 0;
+  const titleScore = titleTokens.length ? titleHits / titleTokens.length : 0;
+
+  let score = keywordScore * 0.45 + skillScore * 0.4 + titleScore * 0.15;
+  if (resume.includes(job.company.toLowerCase())) {
+    score = Math.min(1, score + 0.05);
+    reasons.push(`Experience or interest related to ${job.company}`);
+  }
+  if (!reasons.length) {
+    reasons.push('Partial keyword overlap with this role');
+  }
+
+  return { score: Math.min(1, Math.max(0, score)), reasons };
 }
 
 function deduplicateJobs(jobs: JobListing[]): JobListing[] {

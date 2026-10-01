@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth-store';
-import { LoginForm } from './LoginForm';
 
 interface RoleBasedRouteProps {
   children: ReactNode;
@@ -17,22 +16,19 @@ export function RoleBasedRoute({
   requireOnboarding = true
 }: RoleBasedRouteProps) {
   const { user, isAuthenticated } = useAuthStore();
+  const location = useLocation();
 
-  // Not authenticated - show login
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <LoginForm />
-      </div>
-    );
+    const loginPath = allowedRoles.length === 1 && allowedRoles[0] === 'recruiter'
+      ? '/recruiter/login'
+      : '/login';
+    return <Navigate to={loginPath} replace state={{ from: location.pathname }} />;
   }
 
-  // Check role
   if (!user?.role || !allowedRoles.includes(user.role)) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  // For recruiters, check onboarding status
   if (requireOnboarding && user.role === 'recruiter' && !user.onboardingComplete) {
     return <Navigate to="/recruiter/onboarding" replace />;
   }
@@ -40,7 +36,6 @@ export function RoleBasedRoute({
   return <>{children}</>;
 }
 
-// Component that redirects to appropriate dashboard based on role
 export function DashboardRedirect() {
   const { user, isAuthenticated } = useAuthStore();
 
@@ -55,6 +50,5 @@ export function DashboardRedirect() {
     return <Navigate to="/recruiter/dashboard" replace />;
   }
 
-  // Default to candidate dashboard
   return <Navigate to="/candidate/dashboard" replace />;
 }

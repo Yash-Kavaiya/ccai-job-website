@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useJobMatchingStore } from '@/store/job-matching-store';
 import { useResumeStore } from '@/store/resume-store';
 import OneClickApply from '@/components/jobs/OneClickApply';
@@ -45,8 +46,18 @@ import {
 
 export default function JobSearchPage() {
   const { toast } = useToast();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('search');
+  const initialTab =
+    location.pathname === '/matching'
+      ? 'matches'
+      : searchParams.get('tab') === 'apply'
+        ? 'apply'
+        : searchParams.get('tab') === 'saved'
+          ? 'search'
+          : 'search';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [showFilters, setShowFilters] = useState(false);
   const [jobDescriptionText, setJobDescriptionText] = useState('');
   const [showJDMatcher, setShowJDMatcher] = useState(false);
@@ -54,6 +65,18 @@ export default function JobSearchPage() {
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState('relevance');
   const [showBulkApplyModal, setShowBulkApplyModal] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname === '/matching') {
+      setActiveTab('matches');
+    } else if (searchParams.get('tab') === 'apply') {
+      setActiveTab('apply');
+    } else if (searchParams.get('tab') === 'saved' || !searchParams.get('tab')) {
+      if (location.pathname === '/jobs' && searchParams.get('tab') === 'saved') {
+        setActiveTab('search');
+      }
+    }
+  }, [location.pathname, searchParams]);
 
   // Filter states
   const [locationFilter, setLocationFilter] = useState('');
@@ -682,9 +705,9 @@ export default function JobSearchPage() {
               </div>
 
               {/* JD Similarity Matcher */}
-              <div className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-purple-50">
+              <div className="border rounded-lg p-4 bg-muted/40">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-sm">Job Description Vector Matching</h4>
+                  <h4 className="font-medium text-sm">Match by job description</h4>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -698,7 +721,7 @@ export default function JobSearchPage() {
                   <div className="space-y-3">
                     <textarea
                       className="w-full h-32 p-3 border rounded-md resize-none text-sm"
-                      placeholder="Paste a job description here to find similar roles using vector similarity search (Qdrant-style)..."
+                      placeholder="Paste a job description to find similar roles instantly..."
                       value={jobDescriptionText}
                       onChange={(e) => setJobDescriptionText(e.target.value)}
                     />
@@ -782,7 +805,7 @@ export default function JobSearchPage() {
                     className="gap-2"
                   >
                     <RefreshCw className="h-4 w-4" />
-                    Auto-Aggregate Jobs
+                    Refresh jobs
                   </Button>
 
                   <Button

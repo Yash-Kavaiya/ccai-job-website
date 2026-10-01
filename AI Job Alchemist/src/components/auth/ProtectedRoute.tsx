@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth-store';
-import { LoginForm } from './LoginForm';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -8,13 +8,10 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated } = useAuthStore();
+  const location = useLocation();
 
   if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <LoginForm />
-      </div>
-    );
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
   return <>{children}</>;

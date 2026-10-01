@@ -54,6 +54,31 @@ interface ResumeStore {
   clearError: () => void;
 }
 
+function mapStorageError(error: unknown): string {
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: string }).code)
+      : '';
+  const message = error instanceof Error ? error.message : String(error || 'Upload failed');
+
+  if (code === 'storage/quota-exceeded' || message.includes('quota-exceeded') || message.includes('Quota for bucket')) {
+    return 'Firebase Storage quota for this project has been exceeded. Uploads will work again after the project Storage quota is raised (Blaze plan). Your file was not saved.';
+  }
+  if (code === 'storage/unauthorized' || message.includes('storage/unauthorized')) {
+    return 'You do not have permission to upload to Storage. Please sign in again and retry.';
+  }
+  if (code === 'storage/retry-limit-exceeded') {
+    return 'Upload failed after multiple retries. Check your connection and try again.';
+  }
+  if (code === 'storage/canceled') {
+    return 'Upload was canceled.';
+  }
+  if (code === 'storage/invalid-checksum') {
+    return 'The uploaded file was corrupted in transit. Please try again.';
+  }
+  return message || 'Upload failed';
+}
+
 // Simple ATS analysis based on common keywords
 const performBasicAnalysis = (fileName: string): ResumeAnalysis => {
   // This is a basic analysis - in production, you'd use AI/ML service
@@ -148,11 +173,12 @@ export const useResumeStore = create<ResumeStore>()(
 
         } catch (error) {
           console.error('Upload error:', error);
+          const friendly = mapStorageError(error);
           set({
             isUploading: false,
-            uploadError: error instanceof Error ? error.message : 'Upload failed'
+            uploadError: friendly,
           });
-          throw error;
+          throw new Error(friendly);
         }
       },
 

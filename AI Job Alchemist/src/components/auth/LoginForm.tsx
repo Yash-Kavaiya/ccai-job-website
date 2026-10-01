@@ -29,6 +29,10 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
     setActiveTab(defaultView);
   }, [defaultView]);
 
+  useEffect(() => {
+    setSelectedRole(role);
+  }, [role]);
+
   const handleEmailAuth = async (isSignup: boolean) => {
     if (!email || !password) {
       toast({
@@ -41,13 +45,13 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
 
     try {
       if (isSignup) {
-        await signupWithEmail(email, password, selectedRole); // use selectedRole
+        await signupWithEmail(email, password, selectedRole);
         toast({
           title: "Account created!",
           description: `Welcome to AIJobHub${selectedRole === 'recruiter' ? ' for Recruiters' : ''}`,
         });
       } else {
-        await loginWithEmail(email, password);
+        await loginWithEmail(email, password, selectedRole);
         toast({
           title: "Welcome back!",
           description: "Successfully signed in",
@@ -56,7 +60,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
     } catch (err: any) {
       toast({
         title: isSignup ? "Sign up failed" : "Login failed",
-        description: error || err.message,
+        description: err?.message || error || 'Authentication failed',
         variant: "destructive",
       });
     }
@@ -64,7 +68,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
 
   const handleGithubLogin = async () => {
     try {
-      await loginWithGithub(selectedRole);
+      await loginWithGithub(selectedRole, selectedRole);
       toast({
         title: "Welcome!",
         description: "Successfully signed in with GitHub",
@@ -72,7 +76,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
     } catch (err: any) {
       toast({
         title: "GitHub login failed",
-        description: error || err.message,
+        description: err?.message || error || 'GitHub login failed',
         variant: "destructive",
       });
     }
@@ -80,7 +84,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
 
   const handleGoogleLogin = async () => {
     try {
-      await loginWithGoogle(selectedRole);
+      await loginWithGoogle(selectedRole, selectedRole);
       toast({
         title: "Welcome!",
         description: "Successfully signed in with Google",
@@ -88,7 +92,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
     } catch (err: any) {
       toast({
         title: "Google login failed",
-        description: error || err.message,
+        description: err?.message || error || 'Google login failed',
         variant: "destructive",
       });
     }
@@ -98,7 +102,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
   const title = isRecruiter ? 'Recruiter Portal' : 'Welcome to AIJobHub';
 
   return (
-    <Card className="w-full max-w-md mx-auto border-0 shadow-none sm:border sm:shadow-sm">
+    <Card className="w-full max-w-md mx-auto border-0 shadow-none sm:border sm:shadow-sm animate-in fade-in-50 duration-300">
       <CardHeader className="text-center">
         <div className="w-12 h-12 ai-gradient rounded-full flex items-center justify-center mx-auto mb-4 bg-primary/10">
           {isRecruiter ? <Building className="w-6 h-6 text-primary" /> : <Lock className="w-6 h-6 text-primary" />}
@@ -109,7 +113,7 @@ export function LoginForm({ defaultView = 'login', role = 'candidate', hideTabs 
         <CardDescription>
           {isRecruiter
             ? 'Find top AI talent for your organization'
-            : 'Sign in to access your dashboard'}
+            : 'Sign in to access your candidate dashboard'}
         </CardDescription>
       </CardHeader>
       <CardContent>

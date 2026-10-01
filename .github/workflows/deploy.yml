@@ -49,6 +49,7 @@ jobs:
           echo "Deploying from $(pwd)"
 
       - name: Check Vercel credentials
+        id: vercel_creds
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
@@ -57,20 +58,31 @@ jobs:
           [ -z "${VERCEL_ORG_ID}" ] && missing+=("VERCEL_ORG_ID")
           [ -z "${VERCEL_PROJECT_ID}" ] && missing+=("VERCEL_PROJECT_ID")
           if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error title=Missing Vercel GitHub Actions secrets::Set these repository secrets before Deploy to Vercel can succeed: ${missing[*]}. See AI Job Alchemist/DEPLOYMENT.md. Typecheck does not need them and runs in the Typecheck and build workflow."
             echo "Missing GitHub Actions secrets: ${missing[*]}"
             echo "Add them under Settings → Secrets and variables → Actions:"
             echo "  VERCEL_TOKEN       from https://vercel.com/account/tokens"
             echo "  VERCEL_ORG_ID      from .vercel/project.json (orgId)"
             echo "  VERCEL_PROJECT_ID  from .vercel/project.json (projectId)"
+            echo "See AI Job Alchemist/DEPLOYMENT.md"
+            # PRs / workflow_dispatch without secrets: skip deploy (do not fail CI).
+            # Push to main still fails so production misconfig is visible.
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+              echo "::notice title=Skipping Vercel deploy::Missing secrets (${missing[*]}). Configure repository Actions secrets to enable preview deploys. Typecheck still runs in the Typecheck and build workflow."
+              echo "skip=true" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            echo "::error title=Missing Vercel GitHub Actions secrets::Set these repository secrets before Deploy to Vercel can succeed: ${missing[*]}. See AI Job Alchemist/DEPLOYMENT.md. Typecheck does not need them and runs in the Typecheck and build workflow."
             echo "Do not commit these values. Pull requests from forks never receive them."
             exit 1
           fi
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
 
       - name: Install Vercel CLI
+        if: steps.vercel_creds.outputs.skip != 'true'
         run: npm install --global vercel@latest
 
       - name: Pull Vercel environment
+        if: steps.vercel_creds.outputs.skip != 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
@@ -82,6 +94,7 @@ jobs:
           vercel pull --yes --environment="${environment}" --token="${VERCEL_TOKEN}"
 
       - name: Build project artifacts
+        if: steps.vercel_creds.outputs.skip != 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
@@ -92,6 +105,7 @@ jobs:
           fi
 
       - name: Deploy project artifacts to Vercel
+        if: steps.vercel_creds.outputs.skip != 'true'
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

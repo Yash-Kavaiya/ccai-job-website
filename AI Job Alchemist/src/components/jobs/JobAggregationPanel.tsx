@@ -114,9 +114,9 @@ export const JobAggregationPanel = () => {
             <Database className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Job Aggregation</h2>
+            <h2 className="text-lg font-semibold">Job board sync</h2>
             <p className="text-sm text-muted-foreground">
-              Collect AI jobs from multiple sources with intelligent deduplication
+              Load and refresh active roles from your Firestore job board
             </p>
           </div>
         </div>

@@ -27,14 +27,27 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  loginWithGoogle: (role?: 'candidate' | 'recruiter') => Promise<void>;
-  loginWithGithub: (role?: 'candidate' | 'recruiter') => Promise<void>;
-  loginWithEmail: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (role?: 'candidate' | 'recruiter', expectedRole?: 'candidate' | 'recruiter') => Promise<void>;
+  loginWithGithub: (role?: 'candidate' | 'recruiter', expectedRole?: 'candidate' | 'recruiter') => Promise<void>;
+  loginWithEmail: (email: string, password: string, expectedRole?: 'candidate' | 'recruiter') => Promise<void>;
   signupWithEmail: (email: string, password: string, role?: 'candidate' | 'recruiter') => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User | null) => void;
   setOnboardingComplete: () => void;
+}
+
+const roleMismatchError = (actual: string, expected: string) =>
+  `This account is registered as a ${actual}. Please use the ${actual} login page instead of the ${expected} portal.`;
+
+async function enforceExpectedRole(
+  actualRole: 'candidate' | 'recruiter' | undefined,
+  expectedRole?: 'candidate' | 'recruiter'
+) {
+  if (expectedRole && actualRole && actualRole !== expectedRole) {
+    await signOut(auth);
+    throw new Error(roleMismatchError(actualRole, expectedRole));
+  }
 }
 
 const mapFirebaseUser = (
@@ -58,27 +71,26 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      loginWithGoogle: async (role) => {
+      loginWithGoogle: async (role, expectedRole) => {
         set({ isLoading: true, error: null });
         try {
           const result = await signInWithPopup(auth, googleProvider);
           const user = result.user;
 
-          // Check/Create user in Firestore
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
 
           let userRole = role;
-          let onboardingComplete = true; // Default for candidates
+          let onboardingComplete = true;
 
           if (userDoc.exists()) {
             const userData = userDoc.data();
             userRole = userData.role as 'candidate' | 'recruiter';
             onboardingComplete = userData.onboardingComplete ?? (userRole === 'candidate');
+            await enforceExpectedRole(userRole, expectedRole);
           } else {
-            // If no role provided for new user, default to candidate
             userRole = role || 'candidate';
-            onboardingComplete = userRole === 'candidate'; // Candidates don't need onboarding
+            onboardingComplete = userRole === 'candidate';
             await setDoc(userDocRef, {
               uid: user.uid,
               email: user.email,
@@ -98,6 +110,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           console.error('Google login failed:', error);
           set({
+            user: null,
+            isAuthenticated: false,
             isLoading: false,
             error: error.message || 'Failed to login with Google'
           });
@@ -105,13 +119,12 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      loginWithGithub: async (role) => {
+      loginWithGithub: async (role, expectedRole) => {
         set({ isLoading: true, error: null });
         try {
           const result = await signInWithPopup(auth, githubProvider);
           const user = result.user;
 
-          // Check/Create user in Firestore
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
 
@@ -122,6 +135,7 @@ export const useAuthStore = create<AuthState>()(
             const userData = userDoc.data();
             userRole = userData.role as 'candidate' | 'recruiter';
             onboardingComplete = userData.onboardingComplete ?? (userRole === 'candidate');
+            await enforceExpectedRole(userRole, expectedRole);
           } else {
             userRole = role || 'candidate';
             onboardingComplete = userRole === 'candidate';
@@ -144,6 +158,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           console.error('GitHub login failed:', error);
           set({
+            user: null,
+            isAuthenticated: false,
             isLoading: false,
             error: error.message || 'Failed to login with GitHub'
           });
@@ -151,12 +167,11 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      loginWithEmail: async (email, password) => {
+      loginWithEmail: async (email, password, expectedRole) => {
         set({ isLoading: true, error: null });
         try {
           const result = await signInWithEmailAndPassword(auth, email, password);
 
-          // Fetch role and onboarding status from Firestore
           const userDocRef = doc(db, 'users', result.user.uid);
           const userDoc = await getDoc(userDocRef);
           let role: 'candidate' | 'recruiter' | undefined;
@@ -168,6 +183,8 @@ export const useAuthStore = create<AuthState>()(
             onboardingComplete = userData.onboardingComplete ?? (role === 'candidate');
           }
 
+          await enforceExpectedRole(role, expectedRole);
+
           set({
             user: mapFirebaseUser(result.user, role, onboardingComplete),
             isAuthenticated: true,
@@ -176,6 +193,8 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           console.error('Login failed:', error);
           set({
+            user: null,
+            isAuthenticated: false,
             isLoading: false,
             error: error.message || 'Failed to login'
           });

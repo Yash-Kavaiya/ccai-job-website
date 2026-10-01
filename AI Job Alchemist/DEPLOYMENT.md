@@ -75,7 +75,7 @@ Two workflows run on pushes and pull requests to `main`:
 | Workflow | File | Needs Vercel secrets? |
 |----------|------|------------------------|
 | Typecheck and build | `.github/workflows/ci.yml` | No. Runs `npm ci` and `npm run build` (`tsc -b && vite build`) in `AI Job Alchemist/`. |
-| Deploy to Vercel | `.github/workflows/deploy.yml` | Yes. Fails immediately if `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID` is unset, before calling the Vercel CLI. |
+| Deploy to Vercel | `.github/workflows/deploy.yml` | Yes for real deploys. On pull requests (and `workflow_dispatch`), missing `VERCEL_*` secrets skip the deploy with a notice (CI stays green). On push to `main`, missing secrets still fail so production misconfig is visible. |
 
 When the three secrets are set, Deploy to Vercel will:
 

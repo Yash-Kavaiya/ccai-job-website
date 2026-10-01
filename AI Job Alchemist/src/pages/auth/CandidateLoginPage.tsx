@@ -4,21 +4,30 @@ import { Brain } from "lucide-react";
 
 export function CandidateLoginPage() {
     return (
-        <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-background via-muted/40 to-secondary/40 flex flex-col items-center justify-center p-4">
             <Link to="/" className="flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity">
                 <div className="w-8 h-8 ai-gradient rounded-lg flex items-center justify-center">
                     <Brain className="w-5 h-5 text-white" />
                 </div>
-                <span className="font-bold text-xl">AIJobHub</span>
+                <span className="font-bold text-xl tracking-tight">AIJobHub</span>
             </Link>
 
             <div className="w-full max-w-md">
-                <LoginForm defaultView="login" role="candidate" hideTabs={true} showRoleSelector={true} />
+                <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+                    Candidate
+                </p>
+                <LoginForm defaultView="login" role="candidate" hideTabs={true} showRoleSelector={false} />
 
                 <p className="text-center text-sm text-muted-foreground mt-4">
                     Don't have an account?{" "}
                     <Link to="/signup" className="text-primary hover:underline font-medium">
                         Sign up
+                    </Link>
+                </p>
+                <p className="text-center text-sm text-muted-foreground mt-2">
+                    Hiring talent?{" "}
+                    <Link to="/recruiter/login" className="text-primary hover:underline font-medium">
+                        Recruiter sign in
                     </Link>
                 </p>
             </div>

@@ -1,13 +1,25 @@
 import { test, expect } from '@playwright/test';
 
+async function clearAuth(page: import('@playwright/test').Page) {
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+}
+
 test.describe('Role-specific auth paths', () => {
+  test.beforeEach(async ({ page }) => {
+    await clearAuth(page);
+  });
+
   test('candidate login page has no role selector and links to recruiter', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByText('Candidate', { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: /Welcome to AIJobHub|Sign In/i }).first()).toBeVisible();
+    await expect(page.getByText('Welcome to AIJobHub')).toBeVisible();
     await expect(page.getByText('I am a')).toHaveCount(0);
     await expect(page.getByRole('link', { name: /Recruiter sign in/i })).toHaveAttribute('href', '/recruiter/login');
-    await expect(page.getByRole('link', { name: /Sign up/i })).toHaveAttribute('href', '/signup');
+    await expect(page.getByRole('link', { name: /^Sign up$/i })).toHaveAttribute('href', '/signup');
   });
 
   test('candidate signup page is role-fixed', async ({ page }) => {
